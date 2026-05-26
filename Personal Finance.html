@@ -1,0 +1,1651 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Personal Finance</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0b;
+    --panel: #111114;
+    --panel-2: #17171b;
+    --border: #232328;
+    --hover: rgba(255,255,255,.04);
+    --hover-soft: rgba(255,255,255,.02);
+    --fg: #e8e8ec;
+    --fg-dim: #c5c5cc;
+    --muted: #7a7a85;
+    --accent: #7aa2ff;
+    --accent-rgb: 122, 162, 255;
+    --mono: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+    font-family: 'Geist', ui-sans-serif, -apple-system, system-ui, sans-serif;
+    font-size: 13px; line-height: 1.45; -webkit-font-smoothing: antialiased;
+    font-feature-settings: 'ss01' on, 'cv11' on;
+  }
+  button { font-family: inherit; }
+  input, select { font-family: inherit; }
+  input:focus, select:focus { border-color: rgba(var(--accent-rgb),.55) !important; box-shadow: 0 0 0 3px rgba(var(--accent-rgb),.15); }
+  ::selection { background: rgba(var(--accent-rgb),.3); }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 5px; border: 2px solid var(--bg); background-clip: content-box; }
+  ::-webkit-scrollbar-thumb:hover { background: #2e2e34; border: 2px solid var(--bg); background-clip: content-box; }
+  input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  input[type=number] { -moz-appearance: textfield; }
+  body::before {
+    content: ''; position: fixed; top: 0; left: 50%; transform: translateX(-50%);
+    width: 600px; height: 200px; pointer-events: none; z-index: 0;
+    background: radial-gradient(ellipse at top, rgba(var(--accent-rgb),.07), transparent 70%);
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel">
+// ── tweaks-panel ─────────────────────────────────────────────────────────────
+
+const __TWEAKS_STYLE = `
+  .twk-panel{position:fixed;right:16px;bottom:16px;z-index:2147483646;width:280px;
+    max-height:calc(100vh - 32px);display:flex;flex-direction:column;
+    transform:scale(var(--dc-inv-zoom,1));transform-origin:bottom right;
+    background:rgba(250,249,247,.78);color:#29261b;
+    -webkit-backdrop-filter:blur(24px) saturate(160%);backdrop-filter:blur(24px) saturate(160%);
+    border:.5px solid rgba(255,255,255,.6);border-radius:14px;
+    box-shadow:0 1px 0 rgba(255,255,255,.5) inset,0 12px 40px rgba(0,0,0,.18);
+    font:11.5px/1.4 ui-sans-serif,system-ui,-apple-system,sans-serif;overflow:hidden}
+  .twk-hd{display:flex;align-items:center;justify-content:space-between;
+    padding:10px 8px 10px 14px;cursor:move;user-select:none}
+  .twk-hd b{font-size:12px;font-weight:600;letter-spacing:.01em}
+  .twk-x{appearance:none;border:0;background:transparent;color:rgba(41,38,27,.55);
+    width:22px;height:22px;border-radius:6px;cursor:default;font-size:13px;line-height:1}
+  .twk-x:hover{background:rgba(0,0,0,.06);color:#29261b}
+  .twk-body{padding:2px 14px 14px;display:flex;flex-direction:column;gap:10px;
+    overflow-y:auto;overflow-x:hidden;min-height:0;
+    scrollbar-width:thin;scrollbar-color:rgba(0,0,0,.15) transparent}
+  .twk-body::-webkit-scrollbar{width:8px}
+  .twk-body::-webkit-scrollbar-track{background:transparent;margin:2px}
+  .twk-body::-webkit-scrollbar-thumb{background:rgba(0,0,0,.15);border-radius:4px;
+    border:2px solid transparent;background-clip:content-box}
+  .twk-body::-webkit-scrollbar-thumb:hover{background:rgba(0,0,0,.25);
+    border:2px solid transparent;background-clip:content-box}
+  .twk-row{display:flex;flex-direction:column;gap:5px}
+  .twk-row-h{flex-direction:row;align-items:center;justify-content:space-between;gap:10px}
+  .twk-lbl{display:flex;justify-content:space-between;align-items:baseline;
+    color:rgba(41,38,27,.72)}
+  .twk-lbl>span:first-child{font-weight:500}
+  .twk-val{color:rgba(41,38,27,.5);font-variant-numeric:tabular-nums}
+  .twk-sect{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+    color:rgba(41,38,27,.45);padding:10px 0 0}
+  .twk-sect:first-child{padding-top:0}
+  .twk-field{appearance:none;box-sizing:border-box;width:100%;min-width:0;height:26px;padding:0 8px;
+    border:.5px solid rgba(0,0,0,.1);border-radius:7px;
+    background:rgba(255,255,255,.6);color:inherit;font:inherit;outline:none}
+  .twk-field:focus{border-color:rgba(0,0,0,.25);background:rgba(255,255,255,.85)}
+  select.twk-field{padding-right:22px;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path fill='rgba(0,0,0,.5)' d='M0 0h10L5 6z'/></svg>");
+    background-repeat:no-repeat;background-position:right 8px center}
+  .twk-slider{appearance:none;-webkit-appearance:none;width:100%;height:4px;margin:6px 0;
+    border-radius:999px;background:rgba(0,0,0,.12);outline:none}
+  .twk-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
+    width:14px;height:14px;border-radius:50%;background:#fff;
+    border:.5px solid rgba(0,0,0,.12);box-shadow:0 1px 3px rgba(0,0,0,.2);cursor:default}
+  .twk-slider::-moz-range-thumb{width:14px;height:14px;border-radius:50%;
+    background:#fff;border:.5px solid rgba(0,0,0,.12);box-shadow:0 1px 3px rgba(0,0,0,.2);cursor:default}
+  .twk-seg{position:relative;display:flex;padding:2px;border-radius:8px;
+    background:rgba(0,0,0,.06);user-select:none}
+  .twk-seg-thumb{position:absolute;top:2px;bottom:2px;border-radius:6px;
+    background:rgba(255,255,255,.9);box-shadow:0 1px 2px rgba(0,0,0,.12);
+    transition:left .15s cubic-bezier(.3,.7,.4,1),width .15s}
+  .twk-seg.dragging .twk-seg-thumb{transition:none}
+  .twk-seg button{appearance:none;position:relative;z-index:1;flex:1;border:0;
+    background:transparent;color:inherit;font:inherit;font-weight:500;min-height:22px;
+    border-radius:6px;cursor:default;padding:4px 6px;line-height:1.2;
+    overflow-wrap:anywhere}
+  .twk-toggle{position:relative;width:32px;height:18px;border:0;border-radius:999px;
+    background:rgba(0,0,0,.15);transition:background .15s;cursor:default;padding:0}
+  .twk-toggle[data-on="1"]{background:#34c759}
+  .twk-toggle i{position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;
+    background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .15s}
+  .twk-toggle[data-on="1"] i{transform:translateX(14px)}
+  .twk-num{display:flex;align-items:center;box-sizing:border-box;min-width:0;height:26px;padding:0 0 0 8px;
+    border:.5px solid rgba(0,0,0,.1);border-radius:7px;background:rgba(255,255,255,.6)}
+  .twk-num-lbl{font-weight:500;color:rgba(41,38,27,.6);cursor:ew-resize;
+    user-select:none;padding-right:8px}
+  .twk-num input{flex:1;min-width:0;height:100%;border:0;background:transparent;
+    font:inherit;font-variant-numeric:tabular-nums;text-align:right;padding:0 8px 0 0;
+    outline:none;color:inherit;-moz-appearance:textfield}
+  .twk-num input::-webkit-inner-spin-button,.twk-num input::-webkit-outer-spin-button{
+    -webkit-appearance:none;margin:0}
+  .twk-num-unit{padding-right:8px;color:rgba(41,38,27,.45)}
+  .twk-btn{appearance:none;height:26px;padding:0 12px;border:0;border-radius:7px;
+    background:rgba(0,0,0,.78);color:#fff;font:inherit;font-weight:500;cursor:default}
+  .twk-btn:hover{background:rgba(0,0,0,.88)}
+  .twk-btn.secondary{background:rgba(0,0,0,.06);color:inherit}
+  .twk-btn.secondary:hover{background:rgba(0,0,0,.1)}
+  .twk-swatch{appearance:none;-webkit-appearance:none;width:56px;height:22px;
+    border:.5px solid rgba(0,0,0,.1);border-radius:6px;padding:0;cursor:default;
+    background:transparent;flex-shrink:0}
+  .twk-swatch::-webkit-color-swatch-wrapper{padding:0}
+  .twk-swatch::-webkit-color-swatch{border:0;border-radius:5.5px}
+  .twk-swatch::-moz-color-swatch{border:0;border-radius:5.5px}
+  .twk-chips{display:flex;gap:6px}
+  .twk-chip{position:relative;appearance:none;flex:1;min-width:0;height:46px;
+    padding:0;border:0;border-radius:6px;overflow:hidden;cursor:default;
+    box-shadow:0 0 0 .5px rgba(0,0,0,.12),0 1px 2px rgba(0,0,0,.06);
+    transition:transform .12s cubic-bezier(.3,.7,.4,1),box-shadow .12s}
+  .twk-chip:hover{transform:translateY(-1px);
+    box-shadow:0 0 0 .5px rgba(0,0,0,.18),0 4px 10px rgba(0,0,0,.12)}
+  .twk-chip[data-on="1"]{box-shadow:0 0 0 1.5px rgba(0,0,0,.85),
+    0 2px 6px rgba(0,0,0,.15)}
+  .twk-chip>span{position:absolute;top:0;bottom:0;right:0;width:34%;
+    display:flex;flex-direction:column;box-shadow:-1px 0 0 rgba(0,0,0,.1)}
+  .twk-chip>span>i{flex:1;box-shadow:0 -1px 0 rgba(0,0,0,.1)}
+  .twk-chip>span>i:first-child{box-shadow:none}
+  .twk-chip svg{position:absolute;top:6px;left:6px;width:13px;height:13px;
+    filter:drop-shadow(0 1px 1px rgba(0,0,0,.3))}
+`;
+
+function useTweaks(defaults) {
+  const [values, setValues] = React.useState(defaults);
+  const setTweak = React.useCallback((keyOrEdits, val) => {
+    const edits = typeof keyOrEdits === 'object' && keyOrEdits !== null
+      ? keyOrEdits : { [keyOrEdits]: val };
+    setValues((prev) => ({ ...prev, ...edits }));
+    window.parent.postMessage({ type: '__edit_mode_set_keys', edits }, '*');
+    window.dispatchEvent(new CustomEvent('tweakchange', { detail: edits }));
+  }, []);
+  return [values, setTweak];
+}
+
+function TweaksPanel({ title = 'Tweaks', children }) {
+  const [open, setOpen] = React.useState(false);
+  const dragRef = React.useRef(null);
+  const offsetRef = React.useRef({ x: 16, y: 16 });
+  const PAD = 16;
+
+  const clampToViewport = React.useCallback(() => {
+    const panel = dragRef.current;
+    if (!panel) return;
+    const w = panel.offsetWidth, h = panel.offsetHeight;
+    const maxRight = Math.max(PAD, window.innerWidth - w - PAD);
+    const maxBottom = Math.max(PAD, window.innerHeight - h - PAD);
+    offsetRef.current = {
+      x: Math.min(maxRight, Math.max(PAD, offsetRef.current.x)),
+      y: Math.min(maxBottom, Math.max(PAD, offsetRef.current.y)),
+    };
+    panel.style.right = offsetRef.current.x + 'px';
+    panel.style.bottom = offsetRef.current.y + 'px';
+  }, []);
+
+  React.useEffect(() => {
+    if (!open) return;
+    clampToViewport();
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', clampToViewport);
+      return () => window.removeEventListener('resize', clampToViewport);
+    }
+    const ro = new ResizeObserver(clampToViewport);
+    ro.observe(document.documentElement);
+    return () => ro.disconnect();
+  }, [open, clampToViewport]);
+
+  React.useEffect(() => {
+    const onMsg = (e) => {
+      const t = e?.data?.type;
+      if (t === '__activate_edit_mode') setOpen(true);
+      else if (t === '__deactivate_edit_mode') setOpen(false);
+    };
+    window.addEventListener('message', onMsg);
+    window.parent.postMessage({ type: '__edit_mode_available' }, '*');
+    return () => window.removeEventListener('message', onMsg);
+  }, []);
+
+  const dismiss = () => {
+    setOpen(false);
+    window.parent.postMessage({ type: '__edit_mode_dismissed' }, '*');
+  };
+
+  const onDragStart = (e) => {
+    const panel = dragRef.current;
+    if (!panel) return;
+    const r = panel.getBoundingClientRect();
+    const sx = e.clientX, sy = e.clientY;
+    const startRight = window.innerWidth - r.right;
+    const startBottom = window.innerHeight - r.bottom;
+    const move = (ev) => {
+      offsetRef.current = {
+        x: startRight - (ev.clientX - sx),
+        y: startBottom - (ev.clientY - sy),
+      };
+      clampToViewport();
+    };
+    const up = () => {
+      window.removeEventListener('mousemove', move);
+      window.removeEventListener('mouseup', up);
+    };
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', up);
+  };
+
+  if (!open) return null;
+  return (
+    <>
+      <style>{__TWEAKS_STYLE}</style>
+      <div ref={dragRef} className="twk-panel" style={{ right: offsetRef.current.x, bottom: offsetRef.current.y }}>
+        <div className="twk-hd" onMouseDown={onDragStart}>
+          <b>{title}</b>
+          <button className="twk-x" aria-label="Close tweaks"
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onClick={dismiss}>✕</button>
+        </div>
+        <div className="twk-body">{children}</div>
+      </div>
+    </>
+  );
+}
+
+function TweakSection({ label }) {
+  return <div className="twk-sect">{label}</div>;
+}
+
+function TweakRow({ label, value, children, inline = false }) {
+  return (
+    <div className={inline ? 'twk-row twk-row-h' : 'twk-row'}>
+      <div className="twk-lbl">
+        <span>{label}</span>
+        {value != null && <span className="twk-val">{value}</span>}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function TweakToggle({ label, value, onChange }) {
+  return (
+    <div className="twk-row twk-row-h">
+      <div className="twk-lbl"><span>{label}</span></div>
+      <button type="button" className="twk-toggle" data-on={value ? '1' : '0'}
+              role="switch" aria-checked={!!value}
+              onClick={() => onChange(!value)}><i /></button>
+    </div>
+  );
+}
+
+function TweakRadio({ label, value, options, onChange }) {
+  const trackRef = React.useRef(null);
+  const [dragging, setDragging] = React.useState(false);
+  const valueRef = React.useRef(value);
+  valueRef.current = value;
+
+  const labelLen = (o) => String(typeof o === 'object' ? o.label : o).length;
+  const maxLen = options.reduce((m, o) => Math.max(m, labelLen(o)), 0);
+  const fitsAsSegments = maxLen <= ({ 2: 16, 3: 10 }[options.length] ?? 0);
+
+  if (!fitsAsSegments) {
+    return (
+      <TweakRow label={label}>
+        <select className="twk-field" value={value} onChange={(e) => onChange(e.target.value)}>
+          {options.map((o) => {
+            const v = typeof o === 'object' ? o.value : o;
+            const l = typeof o === 'object' ? o.label : o;
+            return <option key={v} value={v}>{l}</option>;
+          })}
+        </select>
+      </TweakRow>
+    );
+  }
+
+  const opts = options.map((o) => (typeof o === 'object' ? o : { value: o, label: o }));
+  const idx = Math.max(0, opts.findIndex((o) => o.value === value));
+  const n = opts.length;
+
+  const segAt = (clientX) => {
+    const r = trackRef.current.getBoundingClientRect();
+    const inner = r.width - 4;
+    const i = Math.floor(((clientX - r.left - 2) / inner) * n);
+    return opts[Math.max(0, Math.min(n - 1, i))].value;
+  };
+
+  const onPointerDown = (e) => {
+    setDragging(true);
+    const v0 = segAt(e.clientX);
+    if (v0 !== valueRef.current) onChange(v0);
+    const move = (ev) => {
+      if (!trackRef.current) return;
+      const v = segAt(ev.clientX);
+      if (v !== valueRef.current) onChange(v);
+    };
+    const up = () => {
+      setDragging(false);
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  };
+
+  return (
+    <TweakRow label={label}>
+      <div ref={trackRef} role="radiogroup" onPointerDown={onPointerDown}
+           className={dragging ? 'twk-seg dragging' : 'twk-seg'}>
+        <div className="twk-seg-thumb"
+             style={{ left: `calc(2px + ${idx} * (100% - 4px) / ${n})`,
+                      width: `calc((100% - 4px) / ${n})` }} />
+        {opts.map((o) => (
+          <button key={o.value} type="button" role="radio" aria-checked={o.value === value}>
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </TweakRow>
+  );
+}
+
+function __twkIsLight(hex) {
+  const h = String(hex).replace('#', '');
+  const x = h.length === 3 ? h.replace(/./g, (c) => c + c) : h.padEnd(6, '0');
+  const n = parseInt(x.slice(0, 6), 16);
+  if (Number.isNaN(n)) return true;
+  const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  return r * 299 + g * 587 + b * 114 > 148000;
+}
+
+const __TwkCheck = ({ light }) => (
+  <svg viewBox="0 0 14 14" aria-hidden="true">
+    <path d="M3 7.2 5.8 10 11 4.2" fill="none" strokeWidth="2.2"
+          strokeLinecap="round" strokeLinejoin="round"
+          stroke={light ? 'rgba(0,0,0,.78)' : '#fff'} />
+  </svg>
+);
+
+function TweakColor({ label, value, options, onChange }) {
+  if (!options || !options.length) {
+    return (
+      <div className="twk-row twk-row-h">
+        <div className="twk-lbl"><span>{label}</span></div>
+        <input type="color" className="twk-swatch" value={value}
+               onChange={(e) => onChange(e.target.value)} />
+      </div>
+    );
+  }
+  const key = (o) => String(JSON.stringify(o)).toLowerCase();
+  const cur = key(value);
+  return (
+    <TweakRow label={label}>
+      <div className="twk-chips" role="radiogroup">
+        {options.map((o, i) => {
+          const colors = Array.isArray(o) ? o : [o];
+          const [hero, ...rest] = colors;
+          const sup = rest.slice(0, 4);
+          const on = key(o) === cur;
+          return (
+            <button key={i} type="button" className="twk-chip" role="radio"
+                    aria-checked={on} data-on={on ? '1' : '0'}
+                    style={{ background: hero }}
+                    onClick={() => onChange(o)}>
+              {sup.length > 0 && (
+                <span>{sup.map((c, j) => <i key={j} style={{ background: c }} />)}</span>
+              )}
+              {on && <__TwkCheck light={__twkIsLight(hero)} />}
+            </button>
+          );
+        })}
+      </div>
+    </TweakRow>
+  );
+}
+
+function TweakButton({ label, onClick, secondary = false }) {
+  return (
+    <button type="button" className={secondary ? 'twk-btn secondary' : 'twk-btn'}
+            onClick={onClick}>{label}</button>
+  );
+}
+
+// ── data ─────────────────────────────────────────────────────────────────────
+
+const TODAY = new Date();
+const CURRENT_MONTH = `${TODAY.getFullYear()}-${String(TODAY.getMonth()+1).padStart(2,'0')}`;
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+// Bill template — names, due days and categories only. All amounts start at $0.
+// Use the edit button on any bill to enter your actual amounts.
+const BILL_SEED = [
+  { name: 'Rent',         dueDay: 1,  category: 'Housing'   },
+  { name: 'Farmers Auto', dueDay: 3,  category: 'Insurance' },
+  { name: 'ONG Gas',      dueDay: 4,  category: 'Utility'   },
+  { name: 'Chase Card',   dueDay: 5,  category: 'Credit'    },
+  { name: 'BOK Card',     dueDay: 6,  category: 'Credit'    },
+  { name: 'Utilities',    dueDay: 8,  category: 'Utility'   },
+  { name: 'Capital One',  dueDay: 11, category: 'Credit'    },
+  { name: 'OEC Electric', dueDay: 16, category: 'Utility'   },
+  { name: 'eBay Card',    dueDay: 17, category: 'Credit'    },
+  { name: "Sam's Card",   dueDay: 19, category: 'Credit'    },
+  { name: 'Fiber',        dueDay: 25, category: 'Utility'   },
+];
+
+const DEFAULT_BILLS = BILL_SEED.map((s, i) => ({
+  id: `bill_${i}`, name: s.name, dueDay: s.dueDay, category: s.category,
+  history: {},
+}));
+
+// No debts pre-loaded — add your own via "+ Add debt"
+const DEFAULT_DEBTS = [];
+
+const LS_KEY = 'pf_app_state_v2';
+function loadState() {
+  try { const raw = localStorage.getItem(LS_KEY); return raw ? JSON.parse(raw) : null; }
+  catch (e) { return null; }
+}
+function saveState(s) {
+  try { localStorage.setItem(LS_KEY, JSON.stringify(s)); } catch (e) {}
+}
+
+function useAppState() {
+  const persisted = loadState();
+  const [bills, setBills] = React.useState(persisted?.bills ?? DEFAULT_BILLS);
+  const [debts, setDebts] = React.useState(persisted?.debts ?? DEFAULT_DEBTS);
+
+  React.useEffect(() => { saveState({ bills, debts }); }, [bills, debts]);
+
+  const setBillStatus = (billId, month, status) => {
+    setBills(prev => prev.map(b => {
+      if (b.id !== billId) return b;
+      const h = { ...b.history };
+      h[month] = { ...(h[month] || { amount: 0 }), status };
+      return { ...b, history: h };
+    }));
+  };
+  const setBillAmount = (billId, month, amount) => {
+    setBills(prev => prev.map(b => {
+      if (b.id !== billId) return b;
+      const h = { ...b.history };
+      h[month] = { ...(h[month] || { status: 'unpaid' }), amount };
+      return { ...b, history: h };
+    }));
+  };
+  const addBill = (bill) => {
+    const id = `bill_${Date.now()}`;
+    setBills(prev => [...prev, { id, history: {}, ...bill }]);
+  };
+  const removeBill = (id) => setBills(prev => prev.filter(b => b.id !== id));
+  const updateBill = (id, patch) => {
+    setBills(prev => prev.map(b => {
+      if (b.id !== id) return b;
+      const next = { ...b, ...patch };
+      if (patch.expectedAmount !== undefined) {
+        const h = { ...b.history };
+        Object.keys(h).forEach(mk => {
+          if (mk > CURRENT_MONTH && h[mk]?.projected) h[mk] = { ...h[mk], amount: patch.expectedAmount };
+        });
+        next.history = h;
+        delete next.expectedAmount;
+      }
+      return next;
+    }));
+  };
+  const addDebt = (debt) => {
+    const id = `debt_${Date.now()}`;
+    const today = TODAY.toISOString().slice(0,10);
+    setDebts(prev => [...prev, { id, history: [{ date: today, balance: debt.balance }], ...debt }]);
+  };
+  const removeDebt = (id) => setDebts(prev => prev.filter(d => d.id !== id));
+  const updateDebt = (id, patch) => {
+    setDebts(prev => prev.map(d => {
+      if (d.id !== id) return d;
+      const next = { ...d, ...patch };
+      if (patch.balance !== undefined && patch.balance !== d.balance) {
+        const today = TODAY.toISOString().slice(0,10);
+        const filtered = (d.history || []).filter(h => h.date !== today);
+        next.history = [...filtered, { date: today, balance: patch.balance }]
+          .sort((a,b) => a.date.localeCompare(b.date));
+      }
+      return next;
+    }));
+  };
+  const resetData = () => { setBills(DEFAULT_BILLS); setDebts(DEFAULT_DEBTS); };
+
+  return { bills, debts, setBillStatus, setBillAmount, addBill, removeBill, updateBill, addDebt, removeDebt, updateDebt, resetData };
+}
+
+function fmtMoney(n, opts = {}) {
+  if (n == null || isNaN(n)) return '—';
+  const { compact = false, sign = false } = opts;
+  if (compact && Math.abs(n) >= 1000) return (sign && n > 0 ? '+' : '') + '$' + (n/1000).toFixed(1) + 'k';
+  return (sign && n > 0 ? '+' : '') + '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+function monthKey(year, monthIdx) { return `${year}-${String(monthIdx+1).padStart(2,'0')}`; }
+function billsForMonth(bills, mk) {
+  return bills.map(b => ({ bill: b, entry: b.history[mk] })).filter(x => x.entry && x.entry.amount > 0);
+}
+function ytdPaid(bill, year = 2026) {
+  let total = 0;
+  for (let m = 1; m <= 12; m++) {
+    const key = `${year}-${String(m).padStart(2,'0')}`;
+    const e = bill.history[key];
+    if (e && e.status === 'paid') total += e.amount;
+  }
+  return total;
+}
+function avgMonthly(bill) {
+  const known = Object.values(bill.history).filter(e => !e.projected && e.amount > 0);
+  if (!known.length) return 0;
+  return known.reduce((s,e)=>s+e.amount, 0) / known.length;
+}
+
+// ── ui primitives ─────────────────────────────────────────────────────────────
+
+const STATUS_COLORS = {
+  paid:       { bg: 'rgba(34,197,94,.12)',  fg: '#4ade80', dot: '#22c55e', label: 'Paid' },
+  processing: { bg: 'rgba(245,158,11,.14)', fg: '#fbbf24', dot: '#f59e0b', label: 'Processing' },
+  unpaid:     { bg: 'rgba(239,68,68,.14)',  fg: '#f87171', dot: '#ef4444', label: 'Unpaid' },
+};
+
+function StatusPill({ status, onChange, size = 'sm' }) {
+  const c = STATUS_COLORS[status] || STATUS_COLORS.unpaid;
+  const [open, setOpen] = React.useState(false);
+  const ref = React.useRef(null);
+  React.useEffect(() => {
+    if (!open) return;
+    const close = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [open]);
+  const padding = size === 'xs' ? '2px 7px' : '3px 9px 3px 8px';
+  const fs = size === 'xs' ? 10.5 : 11.5;
+  return (
+    <span ref={ref} style={{ position: 'relative', display: 'inline-block' }}>
+      <button onClick={() => onChange && setOpen(o => !o)} style={{
+        appearance: 'none', border: 0, background: c.bg, color: c.fg,
+        padding, borderRadius: 999, fontSize: fs, fontWeight: 500,
+        letterSpacing: '.01em', cursor: onChange ? 'pointer' : 'default',
+        display: 'inline-flex', alignItems: 'center', gap: 6, lineHeight: 1.2,
+        fontFamily: 'inherit', whiteSpace: 'nowrap',
+      }}>
+        <span style={{ width: 6, height: 6, borderRadius: 999, background: c.dot, boxShadow: `0 0 0 2px ${c.bg}` }}/>
+        {c.label}
+        {onChange && <span style={{ opacity: .5, fontSize: 8, marginLeft: 1 }}>▾</span>}
+      </button>
+      {open && onChange && (
+        <div style={{
+          position: 'absolute', top: '100%', left: 0, marginTop: 4, zIndex: 50,
+          background: 'var(--panel-2)', border: '1px solid var(--border)',
+          borderRadius: 8, padding: 4, minWidth: 130, boxShadow: '0 8px 24px rgba(0,0,0,.4)',
+        }}>
+          {['unpaid','processing','paid'].map(s => {
+            const sc = STATUS_COLORS[s];
+            return (
+              <button key={s} onClick={() => { onChange(s); setOpen(false); }} style={{
+                display: 'flex', alignItems: 'center', gap: 8, width: '100%',
+                padding: '6px 8px', borderRadius: 5, border: 0, background: 'transparent',
+                color: 'var(--fg)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+              }}
+              onMouseEnter={e=>e.currentTarget.style.background='var(--hover)'}
+              onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+                <span style={{ width: 7, height: 7, borderRadius: 999, background: sc.dot }}/>
+                {sc.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </span>
+  );
+}
+
+function Card({ children, style, padded = true, ...rest }) {
+  return (
+    <div style={{
+      background: 'var(--panel)', border: '1px solid var(--border)',
+      borderRadius: 10, padding: padded ? 18 : 0, ...(style || {}),
+    }} {...rest}>{children}</div>
+  );
+}
+
+function SectionTitle({ children, hint, right }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
+        <h3 style={{ margin: 0, fontSize: 13, fontWeight: 600, letterSpacing: '-.005em' }}>{children}</h3>
+        {hint && <span style={{ fontSize: 11, color: 'var(--muted)' }}>{hint}</span>}
+      </div>
+      {right}
+    </div>
+  );
+}
+
+function Sparkline({ values, width = 80, height = 22, stroke = 'var(--accent)', fill = 'rgba(var(--accent-rgb),.12)' }) {
+  if (!values || values.length < 2) return <svg width={width} height={height} />;
+  const min = Math.min(...values), max = Math.max(...values);
+  const range = max - min || 1;
+  const stepX = width / (values.length - 1);
+  const pts = values.map((v, i) => [i * stepX, height - 2 - ((v - min) / range) * (height - 4)]);
+  const path = pts.map((p,i) => (i===0?'M':'L') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ');
+  const area = path + ` L${width},${height} L0,${height} Z`;
+  return (
+    <svg width={width} height={height} style={{ display: 'block' }}>
+      <path d={area} fill={fill} />
+      <path d={path} fill="none" stroke={stroke} strokeWidth={1.25} strokeLinejoin="round" strokeLinecap="round" />
+      <circle cx={pts[pts.length-1][0]} cy={pts[pts.length-1][1]} r={2} fill={stroke}/>
+    </svg>
+  );
+}
+
+function IconBtn({ onClick, title, children, danger }) {
+  return (
+    <button onClick={onClick} title={title} style={{
+      appearance: 'none', border: '1px solid var(--border)', background: 'var(--panel-2)',
+      color: danger ? '#f87171' : 'var(--fg-dim)',
+      width: 26, height: 26, borderRadius: 6, display: 'inline-flex',
+      alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0,
+    }}
+    onMouseEnter={e=>{ e.currentTarget.style.background='var(--hover)'; e.currentTarget.style.color = danger ? '#f87171' : 'var(--fg)'; }}
+    onMouseLeave={e=>{ e.currentTarget.style.background='var(--panel-2)'; e.currentTarget.style.color = danger ? '#f87171' : 'var(--fg-dim)'; }}>
+      {children}
+    </button>
+  );
+}
+
+function Btn({ onClick, children, primary, small, style }) {
+  const base = {
+    appearance: 'none', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 500,
+    letterSpacing: '.005em', fontSize: small ? 11.5 : 12.5,
+    padding: small ? '5px 10px' : '7px 12px', borderRadius: 7,
+    display: 'inline-flex', alignItems: 'center', gap: 6,
+  };
+  if (primary) {
+    return <button onClick={onClick} style={{ ...base, border: '1px solid var(--accent)', background: 'var(--accent)', color: '#0a0a0b', ...style }}>{children}</button>;
+  }
+  return (
+    <button onClick={onClick} style={{ ...base, border: '1px solid var(--border)', background: 'var(--panel-2)', color: 'var(--fg)', ...style }}
+      onMouseEnter={e=>e.currentTarget.style.background='var(--hover)'}
+      onMouseLeave={e=>e.currentTarget.style.background='var(--panel-2)'}>{children}</button>
+  );
+}
+
+function CategoryDot({ category }) {
+  const map = { Housing:'#a78bfa', Insurance:'#22d3ee', Credit:'#f472b6', Utility:'#facc15', Taxes:'#fb923c', Loan:'#60a5fa', 'Credit Card':'#f472b6' };
+  return <span style={{ display:'inline-block', width:6, height:6, borderRadius:2, background: map[category]||'#888', marginRight:8, verticalAlign:'middle' }}/>;
+}
+
+// ── dashboard ─────────────────────────────────────────────────────────────────
+
+const btnLinkStyle = { appearance:'none', border:0, background:'transparent', color:'var(--muted)', fontSize:11.5, cursor:'pointer', padding:0, fontFamily:'inherit' };
+
+function Dashboard({ state, onNav }) {
+  const { bills, debts } = state;
+  const cm = CURRENT_MONTH;
+  const nextMonth = '2026-06';
+
+  const thisMonthBills = billsForMonth(bills, cm);
+  const thisMonthTotal = thisMonthBills.reduce((s,b)=>s+b.entry.amount, 0);
+  const thisMonthPaid  = thisMonthBills.filter(b=>b.entry.status==='paid').reduce((s,b)=>s+b.entry.amount,0);
+  const thisMonthProc  = thisMonthBills.filter(b=>b.entry.status==='processing').reduce((s,b)=>s+b.entry.amount,0);
+  const thisMonthUnpaid= thisMonthBills.filter(b=>b.entry.status==='unpaid').reduce((s,b)=>s+b.entry.amount,0);
+  const paidCount = thisMonthBills.filter(b=>b.entry.status==='paid').length;
+  const totalCount = thisMonthBills.length;
+
+  const today = TODAY;
+  const upcoming = [];
+  bills.forEach(b => {
+    [cm, nextMonth].forEach(mk => {
+      const e = b.history[mk];
+      if (!e) return;
+      const [y,m] = mk.split('-').map(Number);
+      const due = new Date(y, m-1, b.dueDay);
+      const daysDiff = Math.round((due - today) / 86400000);
+      if (daysDiff >= -2 && daysDiff <= 21 && e.status !== 'paid') {
+        upcoming.push({ bill: b, entry: e, due, daysDiff, month: mk });
+      }
+    });
+  });
+  upcoming.sort((a,b)=>a.due-b.due);
+
+  const ytdTotal = bills.reduce((s,b)=>s+ytdPaid(b), 0);
+  const totalDebt = debts.reduce((s,d)=>s+d.balance, 0);
+  const minPayments = debts.reduce((s,d)=>s+(d.minPayment||0), 0);
+  let oldestTotal = 0;
+  debts.forEach(d => { oldestTotal += d.history?.length ? d.history[0].balance : d.balance; });
+  const debtChange = totalDebt - oldestTotal;
+
+  const monthlyTotals = MONTHS.map((_, i) => {
+    const key = `2026-${String(i+1).padStart(2,'0')}`;
+    return bills.reduce((s,b) => {
+      const e = b.history[key];
+      return s + (e && e.amount && !e.projected ? e.amount : 0);
+    }, 0);
+  });
+
+  const stats = [
+    {
+      label: 'This month', value: fmtMoney(thisMonthTotal),
+      sub: `${paidCount}/${totalCount} bills paid`,
+      bar: { paid: thisMonthPaid, processing: thisMonthProc, unpaid: thisMonthUnpaid, total: thisMonthTotal },
+    },
+    {
+      label: 'Outstanding', value: fmtMoney(thisMonthUnpaid + thisMonthProc),
+      sub: thisMonthUnpaid > 0
+        ? `${fmtMoney(thisMonthUnpaid)} unpaid · ${fmtMoney(thisMonthProc)} processing`
+        : thisMonthProc > 0 ? `${fmtMoney(thisMonthProc)} processing` : 'All cleared',
+      tone: thisMonthUnpaid > 0 ? 'red' : thisMonthProc > 0 ? 'amber' : 'green',
+    },
+    { label: 'YTD paid', value: fmtMoney(ytdTotal), sub: `Across ${bills.length} bills` },
+    {
+      label: 'Total debt', value: fmtMoney(totalDebt),
+      sub: `${debtChange < 0 ? '↓' : '↑'} ${fmtMoney(Math.abs(debtChange), { compact: true })} since Jan · min ${fmtMoney(minPayments, { compact: true })}/mo`,
+      tone: debtChange < 0 ? 'green' : 'red',
+    },
+  ];
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+        {stats.map((s, i) => (
+          <Card key={i} style={{ padding: 16 }}>
+            <div style={{ fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.05em', fontWeight: 500 }}>{s.label}</div>
+            <div style={{
+              fontFamily: 'var(--mono)', fontSize: 24, fontWeight: 500, marginTop: 6,
+              letterSpacing: '-.015em', fontVariantNumeric: 'tabular-nums',
+              color: s.tone === 'red' ? '#f87171' : s.tone === 'amber' ? '#fbbf24' : s.tone === 'green' ? '#4ade80' : 'var(--fg)',
+            }}>{s.value}</div>
+            <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 4 }}>{s.sub}</div>
+            {s.bar && s.bar.total > 0 && (
+              <div style={{ display:'flex', gap:2, marginTop:12, height:4, borderRadius:2, overflow:'hidden', background:'var(--border)' }}>
+                <div style={{ width:`${(s.bar.paid/s.bar.total)*100}%`, background:'#22c55e' }}/>
+                <div style={{ width:`${(s.bar.processing/s.bar.total)*100}%`, background:'#f59e0b' }}/>
+                <div style={{ width:`${(s.bar.unpaid/s.bar.total)*100}%`, background:'#ef4444' }}/>
+              </div>
+            )}
+          </Card>
+        ))}
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 12 }}>
+        <Card padded={false}>
+          <div style={{ padding: '14px 16px 6px' }}>
+            <SectionTitle hint={`${upcoming.length} due in next 21 days`}
+              right={<button onClick={() => onNav('bills')} style={btnLinkStyle}>View all →</button>}>
+              Upcoming
+            </SectionTitle>
+          </div>
+          <div>
+            {upcoming.length === 0 && (
+              <div style={{ padding: 24, fontSize: 12, color: 'var(--muted)', textAlign: 'center' }}>Nothing due in the next three weeks.</div>
+            )}
+            {upcoming.slice(0, 8).map((u, i) => {
+              const tone = u.daysDiff < 0 ? 'red' : u.daysDiff <= 3 ? 'amber' : 'default';
+              return (
+                <div key={i} style={{ display:'grid', gridTemplateColumns:'48px 1fr auto auto', alignItems:'center', gap:12, padding:'8px 16px', borderTop:'1px solid var(--border)' }}>
+                  <div style={{ fontFamily:'var(--mono)', fontSize:11, color:'var(--muted)', textAlign:'center', lineHeight:1.15 }}>
+                    <div style={{ fontSize:9, textTransform:'uppercase', letterSpacing:'.08em' }}>{MONTHS[u.due.getMonth()]}</div>
+                    <div style={{ fontSize:17, fontWeight:500, color: tone==='red'?'#f87171':tone==='amber'?'#fbbf24':'var(--fg)' }}>{u.due.getDate()}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize:13, fontWeight:500 }}><CategoryDot category={u.bill.category}/>{u.bill.name}</div>
+                    <div style={{ fontSize:11, color:'var(--muted)', marginTop:1 }}>
+                      {u.daysDiff < 0 ? `${-u.daysDiff}d overdue` : u.daysDiff === 0 ? 'Due today' : u.daysDiff === 1 ? 'Tomorrow' : `In ${u.daysDiff} days`} · {u.bill.category}
+                    </div>
+                  </div>
+                  <div style={{ fontFamily:'var(--mono)', fontSize:13, fontVariantNumeric:'tabular-nums' }}>{fmtMoney(u.entry.amount)}</div>
+                  <StatusPill status={u.entry.status} onChange={(s) => state.setBillStatus(u.bill.id, u.month, s)} size="xs"/>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+
+        <Card padded={false}>
+          <div style={{ padding: '14px 16px 6px' }}>
+            <SectionTitle hint={`${debts.length} accounts`}
+              right={<button onClick={() => onNav('debt')} style={btnLinkStyle}>Manage →</button>}>
+              Debt
+            </SectionTitle>
+          </div>
+          <div>
+            {[...debts].sort((a,b)=>b.balance-a.balance).slice(0,6).map(d => {
+              const pct = totalDebt ? (d.balance/totalDebt)*100 : 0;
+              return (
+                <div key={d.id} style={{ padding:'8px 16px', borderTop:'1px solid var(--border)' }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline', gap:8 }}>
+                    <div style={{ fontSize:12.5, fontWeight:500 }}><CategoryDot category={d.category}/>{d.name}</div>
+                    <div style={{ fontFamily:'var(--mono)', fontSize:12.5, fontVariantNumeric:'tabular-nums' }}>{fmtMoney(d.balance)}</div>
+                  </div>
+                  <div style={{ height:3, background:'var(--border)', borderRadius:2, marginTop:6, overflow:'hidden' }}>
+                    <div style={{ height:'100%', width:`${pct}%`, background:'var(--accent)' }}/>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      </div>
+
+      <Card>
+        <SectionTitle hint="Total bills · 2026">Monthly trend</SectionTitle>
+        <MonthlyTrendChart values={monthlyTotals} />
+      </Card>
+    </div>
+  );
+}
+
+function MonthlyTrendChart({ values }) {
+  const max = Math.max(...values, 1);
+  const currentIdx = TODAY.getMonth();
+  return (
+    <div>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(12, 1fr)', gap:4, alignItems:'end', height:110 }}>
+        {values.map((v, i) => {
+          const h = (v / max) * 100;
+          const isPast = i <= currentIdx;
+          return (
+            <div key={i} style={{ display:'flex', flexDirection:'column', alignItems:'stretch', height:'100%', justifyContent:'flex-end', gap:6 }}>
+              <div style={{
+                position:'relative', height:`${h}%`, minHeight: v > 0 ? 2 : 0,
+                background: isPast ? 'var(--accent)' : 'rgba(var(--accent-rgb),.25)',
+                borderRadius:'3px 3px 1px 1px',
+                opacity: i === currentIdx ? 1 : isPast ? .85 : 1,
+                border: i === currentIdx ? '1px solid var(--accent)' : 'none',
+              }}>
+                {v > 0 && (
+                  <div style={{ position:'absolute', bottom:'100%', left:'50%', transform:'translateX(-50%)', fontSize:9.5, color:'var(--muted)', fontFamily:'var(--mono)', whiteSpace:'nowrap', marginBottom:2, fontVariantNumeric:'tabular-nums' }}>
+                    {(v/1000).toFixed(1)}k
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(12, 1fr)', gap:4, marginTop:8 }}>
+        {MONTHS.map((m, i) => (
+          <div key={m} style={{ textAlign:'center', fontSize:10, color: i===currentIdx?'var(--fg)':'var(--muted)', fontWeight: i===currentIdx?600:400, letterSpacing:'.04em', textTransform:'uppercase' }}>{m}</div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── bills view ────────────────────────────────────────────────────────────────
+
+const inputStyle = { appearance:'none', background:'var(--panel-2)', border:'1px solid var(--border)', color:'var(--fg)', padding:'7px 10px', borderRadius:6, fontSize:13, fontFamily:'inherit', width:'100%', boxSizing:'border-box', outline:'none' };
+const selectStyle = { ...inputStyle, cursor:'pointer' };
+
+function Input({ value, onChange, ...rest }) {
+  return <input value={value} onChange={e=>onChange(e.target.value)} style={inputStyle} {...rest}/>;
+}
+
+function FormRow({ label, children }) {
+  return (
+    <label style={{ display:'flex', flexDirection:'column', gap:5 }}>
+      <span style={{ fontSize:11, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'.06em', fontWeight:500 }}>{label}</span>
+      {children}
+    </label>
+  );
+}
+
+function ModalShell({ onClose, title, children }) {
+  React.useEffect(() => {
+    const k = (e) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', k);
+    return () => document.removeEventListener('keydown', k);
+  }, [onClose]);
+  return (
+    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.55)', zIndex:100, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }} onClick={onClose}>
+      <div onClick={e=>e.stopPropagation()} style={{ background:'var(--panel)', border:'1px solid var(--border)', borderRadius:12, width:'min(440px, 100%)', boxShadow:'0 20px 60px rgba(0,0,0,.6)' }}>
+        <div style={{ padding:'14px 16px', borderBottom:'1px solid var(--border)', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+          <div style={{ fontSize:13, fontWeight:600 }}>{title}</div>
+          <button onClick={onClose} style={{ border:0, background:'transparent', color:'var(--muted)', fontSize:18, cursor:'pointer', width:24, height:24, borderRadius:6, lineHeight:1 }}>×</button>
+        </div>
+        <div style={{ padding:16, display:'flex', flexDirection:'column', gap:10 }}>{children}</div>
+      </div>
+    </div>
+  );
+}
+
+function BillsView({ state, density, hidePaid }) {
+  const { bills } = state;
+  const [viewMonth, setViewMonth] = React.useState(CURRENT_MONTH);
+  const [openBillId, setOpenBillId] = React.useState(null);
+  const [showAdd, setShowAdd] = React.useState(false);
+  const [editingId, setEditingId] = React.useState(null);
+
+  let rows = bills.map(b => ({ bill: b, entry: b.history[viewMonth] || { amount: 0, status: 'unpaid' } }));
+  rows = rows.sort((a,b) => a.bill.dueDay - b.bill.dueDay);
+  if (hidePaid) rows = rows.filter(r => r.entry.status !== 'paid');
+
+  const total = rows.reduce((s,r)=>s+r.entry.amount,0);
+  const paid  = rows.filter(r=>r.entry.status==='paid').reduce((s,r)=>s+r.entry.amount,0);
+
+  const MIN_YEAR = TODAY.getFullYear() - 1, MAX_YEAR = TODAY.getFullYear() + 10;
+  const viewYr  = parseInt(viewMonth.slice(0, 4));
+  const viewMIdx = parseInt(viewMonth.slice(5, 7)) - 1;
+  const setYear  = (y) => setViewMonth(`${y}-${String(viewMIdx + 1).padStart(2,'0')}`);
+  const setMIdx  = (m) => setViewMonth(`${viewYr}-${String(m + 1).padStart(2,'0')}`);
+
+  const rowPad = density === 'compact' ? '6px 14px' : density === 'comfy' ? '14px 14px' : '10px 14px';
+
+  const navBtnStyle = {
+    appearance:'none', border:'1px solid var(--border)', background:'var(--panel-2)',
+    color:'var(--fg-dim)', width:24, height:24, borderRadius:6, display:'inline-flex',
+    alignItems:'center', justifyContent:'center', cursor:'pointer', padding:0, fontSize:13, fontFamily:'inherit',
+  };
+
+  return (
+    <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+      {/* Year + month picker */}
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:12, flexWrap:'wrap' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
+          {/* Year nav */}
+          <div style={{ display:'flex', alignItems:'center', gap:4 }}>
+            <button style={navBtnStyle} disabled={viewYr <= MIN_YEAR}
+              onClick={() => setYear(viewYr - 1)}
+              onMouseEnter={e=>{ if(viewYr > MIN_YEAR) e.currentTarget.style.background='var(--hover)'; }}
+              onMouseLeave={e=>e.currentTarget.style.background='var(--panel-2)'}>‹</button>
+            <div style={{ fontFamily:'var(--mono)', fontSize:13, fontWeight:600, minWidth:36, textAlign:'center', letterSpacing:'-.01em' }}>{viewYr}</div>
+            <button style={navBtnStyle} disabled={viewYr >= MAX_YEAR}
+              onClick={() => setYear(viewYr + 1)}
+              onMouseEnter={e=>{ if(viewYr < MAX_YEAR) e.currentTarget.style.background='var(--hover)'; }}
+              onMouseLeave={e=>e.currentTarget.style.background='var(--panel-2)'}>›</button>
+          </div>
+          {/* Month chips */}
+          <div style={{ display:'flex', gap:3 }}>
+            {MONTHS.map((m, i) => {
+              const active = i === viewMIdx;
+              return (
+                <button key={m} onClick={() => setMIdx(i)} style={{
+                  appearance:'none', border: active ? '1px solid var(--accent)' : '1px solid var(--border)',
+                  background: active ? 'rgba(var(--accent-rgb),.15)' : 'var(--panel-2)',
+                  color: active ? 'var(--accent)' : 'var(--muted)',
+                  fontFamily:'inherit', fontWeight: active ? 600 : 400,
+                  fontSize:11.5, padding:'4px 8px', borderRadius:6, cursor:'pointer',
+                  letterSpacing:'.01em',
+                }}
+                onMouseEnter={e=>{ if(!active){ e.currentTarget.style.background='var(--hover)'; e.currentTarget.style.color='var(--fg)'; }}}
+                onMouseLeave={e=>{ if(!active){ e.currentTarget.style.background='var(--panel-2)'; e.currentTarget.style.color='var(--muted)'; }}}>
+                  {m}
+                </button>
+              );
+            })}
+          </div>
+          <div style={{ fontSize:11.5, color:'var(--muted)' }}>
+            <span style={{ fontFamily:'var(--mono)', color:'var(--fg)' }}>{fmtMoney(paid)}</span> of <span style={{ fontFamily:'var(--mono)' }}>{fmtMoney(total)}</span> paid
+          </div>
+        </div>
+        <Btn small onClick={()=>setShowAdd(true)}>+ Add bill</Btn>
+      </div>
+
+      <Card padded={false}>
+        <div style={{ display:'grid', gridTemplateColumns:'52px 1.4fr 1fr 1fr 100px 84px 70px', padding:'10px 14px', borderBottom:'1px solid var(--border)', fontSize:10, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'.06em', fontWeight:500 }}>
+          <div>Due</div><div>Bill</div><div>Category</div><div>Status</div>
+          <div style={{ textAlign:'right' }}>Amount</div>
+          <div style={{ textAlign:'right' }}>YTD paid</div>
+          <div/>
+        </div>
+        {rows.length === 0 && (
+          <div style={{ padding:32, textAlign:'center', fontSize:12, color:'var(--muted)' }}>
+            {hidePaid ? 'All bills paid for this month.' : 'No bills for this month yet.'}
+          </div>
+        )}
+        {rows.map((r, idx) => {
+          const ytd = ytdPaid(r.bill);
+          const expanded = openBillId === r.bill.id;
+          return (
+            <div key={r.bill.id} style={{ borderTop: idx > 0 ? '1px solid var(--border)' : 'none' }}>
+              <div style={{ display:'grid', gridTemplateColumns:'52px 1.4fr 1fr 1fr 100px 84px 70px', padding:rowPad, alignItems:'center', cursor:'pointer', background: expanded ? 'var(--hover)' : 'transparent' }}
+                onClick={() => setOpenBillId(expanded ? null : r.bill.id)}
+                onMouseEnter={e=>{ if(!expanded) e.currentTarget.style.background='var(--hover-soft)'; }}
+                onMouseLeave={e=>{ if(!expanded) e.currentTarget.style.background='transparent'; }}>
+                <div style={{ fontFamily:'var(--mono)', fontSize:12, color:'var(--muted)', fontVariantNumeric:'tabular-nums' }}>{String(r.bill.dueDay).padStart(2,'0')}</div>
+                <div style={{ fontSize:13, fontWeight:500 }}><CategoryDot category={r.bill.category}/>{r.bill.name}</div>
+                <div style={{ fontSize:12, color:'var(--muted)' }}>{r.bill.category}</div>
+                <div onClick={e=>e.stopPropagation()}>
+                  <StatusPill status={r.entry.status} onChange={(s)=>state.setBillStatus(r.bill.id, viewMonth, s)}/>
+                </div>
+                <div style={{ textAlign:'right', fontFamily:'var(--mono)', fontSize:13, fontVariantNumeric:'tabular-nums' }}>{fmtMoney(r.entry.amount)}</div>
+                <div style={{ textAlign:'right', fontFamily:'var(--mono)', fontSize:12, color:'var(--muted)', fontVariantNumeric:'tabular-nums' }}>{fmtMoney(ytd, { compact:true })}</div>
+                <div style={{ display:'flex', justifyContent:'flex-end', gap:4, alignItems:'center' }} onClick={e=>e.stopPropagation()}>
+                  <IconBtn title="Edit bill" onClick={()=>setEditingId(r.bill.id)}>
+                    <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M11 2.5l2.5 2.5L5 13.5H2.5V11L11 2.5z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/></svg>
+                  </IconBtn>
+                  <IconBtn title="Delete bill" danger onClick={()=>{ if(confirm(`Delete "${r.bill.name}"?`)) state.removeBill(r.bill.id); }}>
+                    <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M3 4.5h10M6.5 4V2.5h3V4M5 4.5l.5 9h5l.5-9M7 7v4M9 7v4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  </IconBtn>
+                </div>
+              </div>
+              {expanded && (
+                <div style={{ padding:'6px 14px 16px', background:'var(--hover)', borderTop:'1px solid var(--border)' }}>
+                  <BillDetail bill={r.bill} state={state}/>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </Card>
+
+      {showAdd && <AddBillModal onClose={()=>setShowAdd(false)} state={state}/>}
+      {editingId && <EditBillModal onClose={()=>setEditingId(null)} state={state} bill={bills.find(b=>b.id===editingId)} viewMonth={viewMonth}/>}
+    </div>
+  );
+}
+
+function BillDetail({ bill, state }) {
+  const monthly = MONTHS.map((m, i) => {
+    const key = `2026-${String(i+1).padStart(2,'0')}`;
+    return { month: m, key, entry: bill.history[key] };
+  });
+  const knownVals = monthly.filter(m => m.entry && !m.entry.projected).map(m=>m.entry.amount);
+  const avg = knownVals.length ? knownVals.reduce((s,v)=>s+v,0)/knownVals.length : 0;
+  const total = ytdPaid(bill);
+  const max = Math.max(...monthly.map(m => m.entry?.amount || 0), 1);
+
+  return (
+    <div style={{ padding:'12px 8px 4px' }}>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:10, marginBottom:14 }}>
+        {[
+          { label:'Avg / month', value: fmtMoney(avg) },
+          { label:'YTD paid',    value: fmtMoney(total) },
+          { label:'Highest',     value: fmtMoney(Math.max(...knownVals, 0)) },
+          { label:'Lowest',      value: fmtMoney(Math.min(...knownVals.filter(v=>v>0), Infinity) === Infinity ? 0 : Math.min(...knownVals.filter(v=>v>0))) },
+        ].map(s => (
+          <div key={s.label}>
+            <div style={{ fontSize:10, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'.06em' }}>{s.label}</div>
+            <div style={{ fontFamily:'var(--mono)', fontSize:16, marginTop:2, fontVariantNumeric:'tabular-nums' }}>{s.value}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{ fontSize:10, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'.06em', marginBottom:8 }}>Monthly history · 2026</div>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(12, 1fr)', gap:4 }}>
+        {monthly.map(m => {
+          const amt = m.entry?.amount || 0;
+          const status = m.entry?.status || 'unpaid';
+          const sc = STATUS_COLORS[status];
+          const h = max > 0 ? (amt/max)*60 : 0;
+          const projected = m.entry?.projected;
+          return (
+            <div key={m.key} style={{ display:'flex', flexDirection:'column', alignItems:'stretch', gap:4 }}>
+              <div style={{ height:60, display:'flex', alignItems:'flex-end' }}>
+                {amt > 0 && (
+                  <div style={{ width:'100%', height:`${h}px`, background: projected ? 'transparent' : sc.dot, border: projected ? `1px dashed ${sc.dot}` : 'none', borderRadius:'2px 2px 0 0', opacity: projected ? .4 : 1 }}/>
+                )}
+              </div>
+              <div style={{ textAlign:'center', fontSize:9, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'.05em' }}>{m.month}</div>
+              <div style={{ textAlign:'center', fontFamily:'var(--mono)', fontSize:10, color: amt>0?'var(--fg-dim)':'var(--muted)', fontVariantNumeric:'tabular-nums' }}>
+                {amt > 0 ? (amt >= 1000 ? `${(amt/1000).toFixed(1)}k` : Math.round(amt)) : '—'}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function AddBillModal({ onClose, state }) {
+  const [name, setName] = React.useState('');
+  const [dueDay, setDueDay] = React.useState(1);
+  const [amount, setAmount] = React.useState('');
+  const [category, setCategory] = React.useState('Utility');
+
+  const submit = () => {
+    if (!name.trim()) return;
+    const amt = parseFloat(amount) || 0;
+    const history = {};
+    for (let m = 1; m <= 12; m++) {
+      const key = `2026-${String(m).padStart(2,'0')}`;
+      history[key] = { amount: amt, status: m < 5 ? 'paid' : 'unpaid', projected: m > 5 };
+    }
+    state.addBill({ name: name.trim(), dueDay: Number(dueDay), category, history });
+    onClose();
+  };
+  return (
+    <ModalShell onClose={onClose} title="Add bill">
+      <FormRow label="Name"><Input value={name} onChange={setName} placeholder="e.g. Spotify"/></FormRow>
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+        <FormRow label="Due day"><Input type="number" min={1} max={31} value={dueDay} onChange={setDueDay}/></FormRow>
+        <FormRow label="Expected amount"><Input type="number" step="0.01" value={amount} onChange={setAmount} placeholder="0.00"/></FormRow>
+      </div>
+      <FormRow label="Category">
+        <select value={category} onChange={e=>setCategory(e.target.value)} style={selectStyle}>
+          {['Housing','Insurance','Credit','Utility','Subscription','Other'].map(c => <option key={c}>{c}</option>)}
+        </select>
+      </FormRow>
+      <div style={{ display:'flex', justifyContent:'flex-end', gap:8, marginTop:14 }}>
+        <Btn small onClick={onClose}>Cancel</Btn>
+        <Btn small primary onClick={submit}>Add bill</Btn>
+      </div>
+    </ModalShell>
+  );
+}
+
+function EditBillModal({ onClose, state, bill, viewMonth }) {
+  const [name, setName] = React.useState(bill.name);
+  const [dueDay, setDueDay] = React.useState(bill.dueDay);
+  const [category, setCategory] = React.useState(bill.category);
+  const currentEntry = bill.history[viewMonth] || { amount: 0, status: 'unpaid' };
+  const [amount, setAmount] = React.useState(String(currentEntry.amount || ''));
+  const known = Object.values(bill.history).filter(e => !e.projected && e.amount > 0);
+  const avg = known.length ? known.reduce((s,e)=>s+e.amount,0)/known.length : 0;
+  const [expected, setExpected] = React.useState(String(avg ? avg.toFixed(2) : ''));
+
+  const submit = () => {
+    if (!name.trim()) return;
+    state.updateBill(bill.id, { name: name.trim(), dueDay: Number(dueDay), category });
+    const amt = parseFloat(amount);
+    if (!isNaN(amt)) state.setBillAmount(bill.id, viewMonth, amt);
+    const exp = parseFloat(expected);
+    if (!isNaN(exp)) state.updateBill(bill.id, { expectedAmount: exp });
+    onClose();
+  };
+  const removeAndClose = () => {
+    if (confirm(`Delete "${bill.name}"? This removes its entire history.`)) { state.removeBill(bill.id); onClose(); }
+  };
+  const viewMonthLabel = (() => { const [y,m] = viewMonth.split('-').map(Number); return `${MONTHS[m-1]} ${y}`; })();
+
+  return (
+    <ModalShell onClose={onClose} title={`Edit ${bill.name}`}>
+      <FormRow label="Name"><Input value={name} onChange={setName}/></FormRow>
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+        <FormRow label="Due day"><Input type="number" min={1} max={31} value={dueDay} onChange={setDueDay}/></FormRow>
+        <FormRow label="Category">
+          <select value={category} onChange={e=>setCategory(e.target.value)} style={selectStyle}>
+            {['Housing','Insurance','Credit','Utility','Subscription','Loan','Other'].map(c => <option key={c}>{c}</option>)}
+          </select>
+        </FormRow>
+      </div>
+      <div style={{ height:1, background:'var(--border)', margin:'4px 0' }}/>
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+        <FormRow label={`Amount · ${viewMonthLabel}`}><Input type="number" step="0.01" value={amount} onChange={setAmount}/></FormRow>
+        <FormRow label="Expected (future months)"><Input type="number" step="0.01" value={expected} onChange={setExpected}/></FormRow>
+      </div>
+      <div style={{ fontSize:11, color:'var(--muted)', marginTop:-4 }}>Expected updates future projected months only. Past months keep their actuals.</div>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:8, marginTop:14 }}>
+        <button onClick={removeAndClose} style={{ appearance:'none', border:'1px solid var(--border)', background:'transparent', color:'#f87171', padding:'6px 11px', borderRadius:7, fontSize:12, cursor:'pointer', fontFamily:'inherit' }}>Delete bill</button>
+        <div style={{ display:'flex', gap:8 }}>
+          <Btn small onClick={onClose}>Cancel</Btn>
+          <Btn small primary onClick={submit}>Save changes</Btn>
+        </div>
+      </div>
+    </ModalShell>
+  );
+}
+
+// ── calendar view ─────────────────────────────────────────────────────────────
+
+function CalendarView({ state, hidePaid }) {
+  const [viewYear, setViewYear] = React.useState(TODAY.getFullYear());
+  const [viewMonthIdx, setViewMonthIdx] = React.useState(TODAY.getMonth());
+  const mk = `${viewYear}-${String(viewMonthIdx+1).padStart(2,'0')}`;
+
+  const firstDay = new Date(viewYear, viewMonthIdx, 1);
+  const daysInMonth = new Date(viewYear, viewMonthIdx+1, 0).getDate();
+  const startOffset = firstDay.getDay();
+  const totalCells = Math.ceil((startOffset + daysInMonth) / 7) * 7;
+
+  const billsByDay = {};
+  state.bills.forEach(b => {
+    const e = b.history[mk];
+    if (!e || e.amount <= 0) return;
+    if (hidePaid && e.status === 'paid') return;
+    (billsByDay[b.dueDay] = billsByDay[b.dueDay] || []).push({ bill: b, entry: e });
+  });
+
+  const monthTotal = Object.values(billsByDay).flat().reduce((s,x)=>s+x.entry.amount,0);
+  const monthPaid  = Object.values(billsByDay).flat().filter(x=>x.entry.status==='paid').reduce((s,x)=>s+x.entry.amount,0);
+  const todayIsThisMonth = TODAY.getFullYear() === viewYear && TODAY.getMonth() === viewMonthIdx;
+
+  const goPrev = () => { if (viewMonthIdx === 0) { setViewYear(y=>y-1); setViewMonthIdx(11); } else setViewMonthIdx(m=>m-1); };
+  const goNext = () => { if (viewMonthIdx === 11) { setViewYear(y=>y+1); setViewMonthIdx(0); } else setViewMonthIdx(m=>m+1); };
+
+  return (
+    <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+          <div style={{ display:'flex', gap:4 }}>
+            <Btn small onClick={goPrev}>‹</Btn>
+            <Btn small onClick={goNext}>›</Btn>
+          </div>
+          <h2 style={{ margin:0, fontSize:17, fontWeight:600, letterSpacing:'-.015em' }}>
+            {firstDay.toLocaleString('en-US',{month:'long'})} <span style={{ color:'var(--muted)', fontWeight:400 }}>{viewYear}</span>
+          </h2>
+          <Btn small onClick={()=>{ setViewYear(TODAY.getFullYear()); setViewMonthIdx(TODAY.getMonth()); }}>Today</Btn>
+        </div>
+        <div style={{ fontSize:12, color:'var(--muted)' }}>
+          <span style={{ fontFamily:'var(--mono)', color:'var(--fg)' }}>{fmtMoney(monthPaid)}</span> of <span style={{ fontFamily:'var(--mono)' }}>{fmtMoney(monthTotal)}</span> paid
+        </div>
+      </div>
+
+      <Card padded={false}>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(7, 1fr)', borderBottom:'1px solid var(--border)' }}>
+          {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => (
+            <div key={d} style={{ padding:'10px 12px', fontSize:10, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'.08em', fontWeight:500, borderRight:'1px solid var(--border)' }}>{d}</div>
+          ))}
+        </div>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(7, 1fr)', gridAutoRows:'minmax(110px, 1fr)' }}>
+          {Array.from({ length: totalCells }).map((_, i) => {
+            const dayNum = i - startOffset + 1;
+            const inMonth = dayNum >= 1 && dayNum <= daysInMonth;
+            const isToday = todayIsThisMonth && dayNum === TODAY.getDate();
+            const isPast = todayIsThisMonth && dayNum < TODAY.getDate();
+            const items = inMonth ? (billsByDay[dayNum] || []) : [];
+            const dayTotal = items.reduce((s,x)=>s+x.entry.amount,0);
+            return (
+              <div key={i} style={{ borderRight:'1px solid var(--border)', borderTop:'1px solid var(--border)', background: !inMonth?'rgba(0,0,0,.15)':isToday?'rgba(var(--accent-rgb),.06)':'transparent', padding:8, display:'flex', flexDirection:'column', gap:4, minHeight:0, overflow:'hidden' }}>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                  <div style={{ fontFamily:'var(--mono)', fontSize:11, color: !inMonth?'transparent':isToday?'var(--accent)':isPast?'var(--muted)':'var(--fg-dim)', fontWeight: isToday?600:400, width:20, height:20, borderRadius:10, display:'inline-flex', alignItems:'center', justifyContent:'center', background: isToday?'rgba(var(--accent-rgb),.18)':'transparent', fontVariantNumeric:'tabular-nums' }}>
+                    {inMonth ? dayNum : ''}
+                  </div>
+                  {dayTotal > 0 && (
+                    <div style={{ fontSize:10, color:'var(--muted)', fontFamily:'var(--mono)', fontVariantNumeric:'tabular-nums' }}>{fmtMoney(dayTotal,{compact:true})}</div>
+                  )}
+                </div>
+                <div style={{ display:'flex', flexDirection:'column', gap:3, overflow:'hidden' }}>
+                  {items.map((it, k) => <CalendarBillChip key={k} item={it} state={state} monthKey={mk}/>)}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </Card>
+
+      <div style={{ display:'flex', gap:14, alignItems:'center', fontSize:11, color:'var(--muted)' }}>
+        {[['#22c55e','Paid'],['#f59e0b','Processing'],['#ef4444','Unpaid']].map(([color,label]) => (
+          <span key={label} style={{ display:'inline-flex', alignItems:'center', gap:5 }}>
+            <span style={{ width:7, height:7, borderRadius:999, background:color }}/>{label}
+          </span>
+        ))}
+        <div style={{ marginLeft:'auto' }}>Click a chip to cycle status</div>
+      </div>
+    </div>
+  );
+}
+
+function CalendarBillChip({ item, state, monthKey }) {
+  const sc = STATUS_COLORS[item.entry.status];
+  const cycle = () => {
+    const order = ['unpaid','processing','paid'];
+    const next = order[(order.indexOf(item.entry.status)+1) % 3];
+    state.setBillStatus(item.bill.id, monthKey, next);
+  };
+  return (
+    <button onClick={cycle} style={{ appearance:'none', textAlign:'left', border:0, background:sc.bg, color:sc.fg, borderLeft:`2px solid ${sc.dot}`, padding:'3px 6px', borderRadius:'3px 4px 4px 3px', fontSize:10.5, fontFamily:'inherit', cursor:'pointer', lineHeight:1.25, display:'flex', justifyContent:'space-between', alignItems:'center', gap:4 }}>
+      <span style={{ whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', flex:1, fontWeight:500 }}>{item.bill.name}</span>
+      <span style={{ fontFamily:'var(--mono)', fontSize:9.5, opacity:.85, fontVariantNumeric:'tabular-nums' }}>
+        {item.entry.amount >= 1000 ? `${(item.entry.amount/1000).toFixed(1)}k` : Math.round(item.entry.amount)}
+      </span>
+    </button>
+  );
+}
+
+// ── debt view ─────────────────────────────────────────────────────────────────
+
+function DebtView({ state }) {
+  const { debts } = state;
+  const [openId, setOpenId] = React.useState(null);
+  const [showAdd, setShowAdd] = React.useState(false);
+  const [editingId, setEditingId] = React.useState(null);
+
+  const totalDebt = debts.reduce((s,d)=>s+d.balance, 0);
+  const totalMin  = debts.reduce((s,d)=>s+(d.minPayment||0), 0);
+
+  const allDates = new Set();
+  debts.forEach(d => (d.history||[]).forEach(h => allDates.add(h.date)));
+  const sortedDates = [...allDates].sort();
+  const aggregateSeries = sortedDates.map(date => {
+    let total = 0;
+    debts.forEach(d => {
+      const past = (d.history||[]).filter(h => h.date <= date);
+      if (past.length) total += past[past.length-1].balance;
+    });
+    return { date, total };
+  });
+
+  return (
+    <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:12 }}>
+        <Card style={{ padding:16 }}>
+          <div style={{ fontSize:11, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'.05em' }}>Total debt</div>
+          <div style={{ fontFamily:'var(--mono)', fontSize:26, marginTop:4, letterSpacing:'-.015em', fontVariantNumeric:'tabular-nums' }}>{fmtMoney(totalDebt)}</div>
+          <div style={{ fontSize:11, color:'var(--muted)', marginTop:4 }}>{debts.length} accounts</div>
+        </Card>
+        <Card style={{ padding:16 }}>
+          <div style={{ fontSize:11, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'.05em' }}>Min. payments / month</div>
+          <div style={{ fontFamily:'var(--mono)', fontSize:26, marginTop:4, letterSpacing:'-.015em', fontVariantNumeric:'tabular-nums' }}>{fmtMoney(totalMin)}</div>
+          <div style={{ fontSize:11, color:'var(--muted)', marginTop:4 }}>Combined minimum</div>
+        </Card>
+        <Card style={{ padding:16 }}>
+          <div style={{ fontSize:11, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'.05em', marginBottom:6 }}>Balance trend</div>
+          <DebtAggregateChart series={aggregateSeries}/>
+        </Card>
+      </div>
+
+      <div>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
+          <SectionTitle hint={`${debts.length} accounts`}>Accounts</SectionTitle>
+          <Btn small onClick={()=>setShowAdd(true)}>+ Add debt</Btn>
+        </div>
+        <Card padded={false}>
+          {debts.length === 0 && (
+            <div style={{ padding:40, textAlign:'center', color:'var(--muted)', fontSize:12.5 }}>No debts tracked yet. Click "+ Add debt" to start.</div>
+          )}
+          {debts.map((d, idx) => {
+            const hist = d.history || [];
+            const oldest = hist[0]?.balance || d.balance;
+            const change = d.balance - oldest;
+            const pct = totalDebt ? (d.balance/totalDebt)*100 : 0;
+            const expanded = openId === d.id;
+            return (
+              <div key={d.id} style={{ borderTop: idx > 0 ? '1px solid var(--border)' : 'none' }}>
+                <div style={{ display:'grid', gridTemplateColumns:'1.5fr 1fr 110px 110px 120px 70px', alignItems:'center', gap:12, padding:'12px 16px', cursor:'pointer', background: expanded?'var(--hover)':'transparent' }}
+                  onClick={() => setOpenId(expanded ? null : d.id)}
+                  onMouseEnter={e=>{ if(!expanded) e.currentTarget.style.background='var(--hover-soft)'; }}
+                  onMouseLeave={e=>{ if(!expanded) e.currentTarget.style.background='transparent'; }}>
+                  <div>
+                    <div style={{ fontSize:13, fontWeight:500 }}><CategoryDot category={d.category}/>{d.name}</div>
+                    <div style={{ fontSize:11, color:'var(--muted)', marginTop:1 }}>{d.category}</div>
+                  </div>
+                  <div>
+                    <div style={{ height:4, background:'var(--border)', borderRadius:2, overflow:'hidden' }}>
+                      <div style={{ height:'100%', width:`${pct}%`, background:'var(--accent)' }}/>
+                    </div>
+                    <div style={{ fontSize:10.5, color:'var(--muted)', marginTop:4, fontFamily:'var(--mono)' }}>{pct.toFixed(1)}% of total</div>
+                  </div>
+                  <div style={{ textAlign:'right' }}>
+                    <div style={{ fontSize:10, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'.05em' }}>Min/mo</div>
+                    <div style={{ fontFamily:'var(--mono)', fontSize:13, marginTop:1, fontVariantNumeric:'tabular-nums' }}>{fmtMoney(d.minPayment||0)}</div>
+                  </div>
+                  <div style={{ textAlign:'right' }}>
+                    <div style={{ fontSize:10, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'.05em' }}>Change</div>
+                    <div style={{ fontFamily:'var(--mono)', fontSize:13, marginTop:1, fontVariantNumeric:'tabular-nums', color: change<0?'#4ade80':change>0?'#f87171':'var(--muted)' }}>
+                      {change < 0 ? '−' : change > 0 ? '+' : ''}{fmtMoney(Math.abs(change))}
+                    </div>
+                  </div>
+                  <div style={{ textAlign:'right' }}>
+                    <div style={{ fontSize:10, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'.05em' }}>Balance</div>
+                    <div style={{ fontFamily:'var(--mono)', fontSize:15, fontWeight:500, marginTop:1, fontVariantNumeric:'tabular-nums' }}>{fmtMoney(d.balance)}</div>
+                  </div>
+                  <div style={{ display:'flex', justifyContent:'flex-end', gap:6 }} onClick={e=>e.stopPropagation()}>
+                    <IconBtn title="Edit" onClick={()=>setEditingId(d.id)}>
+                      <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M11 2.5l2.5 2.5L5 13.5H2.5V11L11 2.5z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/></svg>
+                    </IconBtn>
+                    <IconBtn title="Delete" danger onClick={()=>{ if(confirm(`Delete "${d.name}"?`)) state.removeDebt(d.id); }}>
+                      <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M3 4.5h10M6.5 4V2.5h3V4M5 4.5l.5 9h5l.5-9M7 7v4M9 7v4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    </IconBtn>
+                  </div>
+                </div>
+                {expanded && (
+                  <div style={{ padding:'8px 16px 20px', background:'var(--hover)', borderTop:'1px solid var(--border)' }}>
+                    <DebtHistoryDetail debt={d} state={state}/>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </Card>
+      </div>
+
+      {showAdd && <AddDebtModal onClose={()=>setShowAdd(false)} state={state}/>}
+      {editingId && <EditDebtModal onClose={()=>setEditingId(null)} state={state} debt={debts.find(d=>d.id===editingId)}/>}
+    </div>
+  );
+}
+
+function DebtAggregateChart({ series }) {
+  if (!series || series.length < 2) return <div style={{ fontSize:11, color:'var(--muted)' }}>Not enough history yet.</div>;
+  const values = series.map(s=>s.total);
+  const first = values[0], last = values[values.length-1];
+  const change = last - first;
+  const pct = first ? (change/first)*100 : 0;
+  return (
+    <div>
+      <Sparkline values={values} width={220} height={36}/>
+      <div style={{ fontSize:11, marginTop:4, color: change<0?'#4ade80':change>0?'#f87171':'var(--muted)' }}>
+        {change < 0 ? '↓ ' : change > 0 ? '↑ ' : ''}{fmtMoney(Math.abs(change),{compact:true})} ({pct.toFixed(1)}%) over {series.length} snapshots
+      </div>
+    </div>
+  );
+}
+
+function DebtHistoryDetail({ debt }) {
+  const history = [...(debt.history || [])].sort((a,b)=>a.date.localeCompare(b.date));
+  const values = history.map(h => h.balance);
+  return (
+    <div style={{ padding:'12px 8px 0' }}>
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1.6fr', gap:24 }}>
+        <div>
+          <div style={{ fontSize:10, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'.06em', marginBottom:8 }}>Balance history</div>
+          <div style={{ display:'flex', flexDirection:'column', gap:6, maxHeight:200, overflowY:'auto' }}>
+            {history.length === 0 && <div style={{ fontSize:12, color:'var(--muted)' }}>No history yet.</div>}
+            {history.map((h, i) => {
+              const prev = i > 0 ? history[i-1].balance : null;
+              const delta = prev != null ? h.balance - prev : 0;
+              return (
+                <div key={i} style={{ display:'grid', gridTemplateColumns:'90px 1fr 80px', alignItems:'center', fontSize:12 }}>
+                  <span style={{ color:'var(--muted)', fontFamily:'var(--mono)', fontVariantNumeric:'tabular-nums' }}>{h.date}</span>
+                  <span style={{ fontFamily:'var(--mono)', fontVariantNumeric:'tabular-nums' }}>{fmtMoney(h.balance)}</span>
+                  <span style={{ fontFamily:'var(--mono)', fontSize:11, textAlign:'right', fontVariantNumeric:'tabular-nums', color: prev==null?'var(--muted)':delta<0?'#4ade80':delta>0?'#f87171':'var(--muted)' }}>
+                    {prev != null ? `${delta<0?'−':delta>0?'+':''}${fmtMoney(Math.abs(delta),{compact:true})}` : '—'}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+        <div>
+          <div style={{ fontSize:10, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'.06em', marginBottom:8 }}>Trend</div>
+          {values.length >= 2
+            ? <BigChart values={values} dates={history.map(h=>h.date)}/>
+            : <div style={{ fontSize:12, color:'var(--muted)' }}>Need at least two snapshots to show a trend.</div>
+          }
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function BigChart({ values, dates }) {
+  const W = 380, H = 140, P = 10;
+  const min = Math.min(...values), max = Math.max(...values);
+  const range = max - min || 1;
+  const stepX = (W - P*2) / (values.length - 1);
+  const pts = values.map((v, i) => [P + i*stepX, H - P - ((v-min)/range)*(H - P*2)]);
+  const path = pts.map((p,i) => (i===0?'M':'L') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ');
+  const area = path + ` L${W-P},${H-P} L${P},${H-P} Z`;
+  return (
+    <svg width="100%" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ maxWidth:420, display:'block' }}>
+      {[0,1,2,3].map(i => (
+        <line key={i} x1={P} x2={W-P} y1={P+(H-P*2)*i/3} y2={P+(H-P*2)*i/3} stroke="var(--border)" strokeWidth="1"/>
+      ))}
+      <path d={area} fill="rgba(var(--accent-rgb),.12)"/>
+      <path d={path} fill="none" stroke="var(--accent)" strokeWidth="1.5" strokeLinejoin="round"/>
+      {pts.map((p, i) => <circle key={i} cx={p[0]} cy={p[1]} r={2.5} fill="var(--accent)"/>)}
+      <text x={P} y={H-1} fill="var(--muted)" fontSize="9" fontFamily="var(--mono)">{dates[0]}</text>
+      <text x={W-P} y={H-1} fill="var(--muted)" fontSize="9" fontFamily="var(--mono)" textAnchor="end">{dates[dates.length-1]}</text>
+      <text x={P+2} y={P+9} fill="var(--muted)" fontSize="9" fontFamily="var(--mono)">${(max).toFixed(0)}</text>
+      <text x={P+2} y={H-P} fill="var(--muted)" fontSize="9" fontFamily="var(--mono)">${(min).toFixed(0)}</text>
+    </svg>
+  );
+}
+
+function AddDebtModal({ onClose, state }) {
+  const [name, setName] = React.useState('');
+  const [category, setCategory] = React.useState('Credit Card');
+  const [balance, setBalance] = React.useState('');
+  const [minPayment, setMinPayment] = React.useState('');
+  const submit = () => {
+    if (!name.trim()) return;
+    state.addDebt({ name: name.trim(), category, balance: parseFloat(balance)||0, minPayment: parseFloat(minPayment)||0 });
+    onClose();
+  };
+  return (
+    <ModalShell onClose={onClose} title="Add debt">
+      <FormRow label="Account name"><Input value={name} onChange={setName} placeholder="e.g. Discover Card"/></FormRow>
+      <FormRow label="Category">
+        <select value={category} onChange={e=>setCategory(e.target.value)} style={selectStyle}>
+          {['Credit Card','Loan','Taxes','Medical','Other'].map(c => <option key={c}>{c}</option>)}
+        </select>
+      </FormRow>
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+        <FormRow label="Current balance"><Input type="number" step="0.01" value={balance} onChange={setBalance} placeholder="0.00"/></FormRow>
+        <FormRow label="Min payment"><Input type="number" step="0.01" value={minPayment} onChange={setMinPayment} placeholder="0.00"/></FormRow>
+      </div>
+      <div style={{ display:'flex', justifyContent:'flex-end', gap:8, marginTop:14 }}>
+        <Btn small onClick={onClose}>Cancel</Btn>
+        <Btn small primary onClick={submit}>Add debt</Btn>
+      </div>
+    </ModalShell>
+  );
+}
+
+function EditDebtModal({ onClose, state, debt }) {
+  const [name, setName] = React.useState(debt.name);
+  const [category, setCategory] = React.useState(debt.category);
+  const [balance, setBalance] = React.useState(String(debt.balance));
+  const [minPayment, setMinPayment] = React.useState(String(debt.minPayment||''));
+  const submit = () => {
+    state.updateDebt(debt.id, { name: name.trim()||debt.name, category, balance: parseFloat(balance)||0, minPayment: parseFloat(minPayment)||0 });
+    onClose();
+  };
+  return (
+    <ModalShell onClose={onClose} title={`Update ${debt.name}`}>
+      <FormRow label="Account name"><Input value={name} onChange={setName}/></FormRow>
+      <FormRow label="Category">
+        <select value={category} onChange={e=>setCategory(e.target.value)} style={selectStyle}>
+          {['Credit Card','Loan','Taxes','Medical','Other'].map(c => <option key={c}>{c}</option>)}
+        </select>
+      </FormRow>
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+        <FormRow label="Current balance"><Input type="number" step="0.01" value={balance} onChange={setBalance}/></FormRow>
+        <FormRow label="Min payment"><Input type="number" step="0.01" value={minPayment} onChange={setMinPayment}/></FormRow>
+      </div>
+      <div style={{ fontSize:11, color:'var(--muted)', marginTop:-4 }}>Changing the balance adds a snapshot dated today.</div>
+      <div style={{ display:'flex', justifyContent:'flex-end', gap:8, marginTop:14 }}>
+        <Btn small onClick={onClose}>Cancel</Btn>
+        <Btn small primary onClick={submit}>Save changes</Btn>
+      </div>
+    </ModalShell>
+  );
+}
+
+// ── app shell ─────────────────────────────────────────────────────────────────
+
+const NAV = [
+  { id: 'dashboard', label: 'Dashboard', icon: (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+      <rect x="2" y="2" width="5" height="6" rx="1" stroke="currentColor" strokeWidth="1.3"/>
+      <rect x="2" y="10" width="5" height="4" rx="1" stroke="currentColor" strokeWidth="1.3"/>
+      <rect x="9" y="2" width="5" height="4" rx="1" stroke="currentColor" strokeWidth="1.3"/>
+      <rect x="9" y="8" width="5" height="6" rx="1" stroke="currentColor" strokeWidth="1.3"/>
+    </svg>
+  )},
+  { id: 'bills', label: 'Bills', icon: (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+      <path d="M3 2h10v12l-1.5-1-1.5 1-1.5-1-1.5 1-1.5-1L4 14V2z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/>
+      <path d="M5.5 5.5h5M5.5 8h5M5.5 10.5h3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+    </svg>
+  )},
+  { id: 'calendar', label: 'Calendar', icon: (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+      <rect x="2" y="3" width="12" height="11" rx="1.5" stroke="currentColor" strokeWidth="1.3"/>
+      <path d="M2 6h12M5 2v2M11 2v2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+    </svg>
+  )},
+  { id: 'debt', label: 'Debt', icon: (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+      <rect x="2" y="4" width="12" height="9" rx="1.5" stroke="currentColor" strokeWidth="1.3"/>
+      <path d="M2 7h12" stroke="currentColor" strokeWidth="1.3"/>
+      <circle cx="11" cy="10.5" r="1" fill="currentColor"/>
+    </svg>
+  )},
+];
+
+const TWEAK_DEFAULTS = { density: 'regular', hidePaid: false, accent: '#7aa2ff' };
+const ACCENT_OPTIONS = ['#7aa2ff', '#9a8cff', '#7ad3a3', '#f5a26b'];
+
+function hexToRgb(hex) {
+  const m = hex.replace('#','');
+  return [parseInt(m.slice(0,2),16), parseInt(m.slice(2,4),16), parseInt(m.slice(4,6),16)].join(', ');
+}
+
+function App() {
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  const state = useAppState();
+  const [view, setView] = React.useState('dashboard');
+
+  React.useEffect(() => {
+    document.documentElement.style.setProperty('--accent', t.accent);
+    document.documentElement.style.setProperty('--accent-rgb', hexToRgb(t.accent));
+  }, [t.accent]);
+
+  return (
+    <div style={{ minHeight:'100vh', display:'flex', flexDirection:'column' }}>
+      <header style={{ borderBottom:'1px solid var(--border)', background:'var(--bg)', position:'sticky', top:0, zIndex:30 }}>
+        <div style={{ maxWidth:1280, margin:'0 auto', padding:'0 28px', display:'flex', alignItems:'center', height:52, gap:24 }}>
+          <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+            <div style={{ width:22, height:22, borderRadius:6, background:'linear-gradient(135deg, var(--accent), rgba(var(--accent-rgb),.5))', display:'flex', alignItems:'center', justifyContent:'center', color:'#0a0a0b', fontWeight:700, fontSize:12, fontFamily:'var(--mono)' }}>P</div>
+            <div style={{ fontSize:13, fontWeight:600, letterSpacing:'-.01em' }}>Personal Finance</div>
+          </div>
+          <nav style={{ display:'flex', gap:2 }}>
+            {NAV.map(n => {
+              const active = view === n.id;
+              return (
+                <button key={n.id} onClick={()=>setView(n.id)} style={{ appearance:'none', border:0, background: active?'var(--hover)':'transparent', color: active?'var(--fg)':'var(--muted)', padding:'6px 11px', borderRadius:7, fontSize:12.5, fontWeight:500, fontFamily:'inherit', cursor:'pointer', display:'inline-flex', alignItems:'center', gap:7 }}
+                  onMouseEnter={e=>{ if(!active) e.currentTarget.style.background='var(--hover-soft)'; }}
+                  onMouseLeave={e=>{ if(!active) e.currentTarget.style.background='transparent'; }}>
+                  <span style={{ color: active?'var(--accent)':'var(--muted)' }}>{n.icon}</span>
+                  {n.label}
+                </button>
+              );
+            })}
+          </nav>
+          <div style={{ marginLeft:'auto', fontSize:11.5, color:'var(--muted)', fontFamily:'var(--mono)' }}>
+            {TODAY.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric', year:'numeric' })}
+          </div>
+        </div>
+      </header>
+
+      <main style={{ maxWidth:1280, margin:'0 auto', padding:'20px 28px 48px', width:'100%', boxSizing:'border-box' }}>
+        <div style={{ marginBottom:18 }}>
+          <h1 style={{ margin:0, fontSize:22, fontWeight:600, letterSpacing:'-.02em' }}>
+            {{ dashboard:'Dashboard', bills:'Bills', calendar:'Calendar', debt:'Debt' }[view]}
+          </h1>
+          <div style={{ fontSize:12.5, color:'var(--muted)', marginTop:4 }}>
+            {{ dashboard:`${TODAY.toLocaleString('en-US',{month:'long',year:'numeric'})} · ${state.bills.length} bills tracked · ${state.debts.length} debts`, bills:'Sorted by due date · click a row for monthly history & running totals', calendar:"Bills laid out on the month they're due · click a chip to cycle status", debt:'Track current balances and watch them go down (or up)' }[view]}
+          </div>
+        </div>
+
+        {view === 'dashboard' && <Dashboard state={state} onNav={setView}/>}
+        {view === 'bills'     && <BillsView state={state} density={t.density} hidePaid={t.hidePaid}/>}
+        {view === 'calendar'  && <CalendarView state={state} hidePaid={t.hidePaid}/>}
+        {view === 'debt'      && <DebtView state={state}/>}
+      </main>
+
+      <TweaksPanel>
+        <TweakSection label="Display"/>
+        <TweakRadio label="Row density" value={t.density} options={['compact','regular','comfy']} onChange={(v)=>setTweak('density',v)}/>
+        <TweakToggle label="Hide paid bills" value={t.hidePaid} onChange={(v)=>setTweak('hidePaid',v)}/>
+        <TweakSection label="Theme"/>
+        <TweakColor label="Accent" value={t.accent} options={ACCENT_OPTIONS} onChange={(v)=>setTweak('accent',v)}/>
+        <TweakSection label="Data"/>
+        <TweakButton label="Reset to blank defaults" onClick={() => {
+          if (confirm('Reset all bills and debts to blank defaults? This clears your data.')) state.resetData();
+        }}/>
+      </TweaksPanel>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
