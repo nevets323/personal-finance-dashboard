@@ -444,20 +444,48 @@ const DEFAULT_BILLS = BILL_SEED.map((s, i) => ({
 const DEFAULT_DEBTS = [];
 
 const LS_KEY = 'pf_app_state_v2';
-function loadState() {
+
+// Load from server; fall back to localStorage if server unreachable
+async function loadStateAsync() {
+  try {
+    const res = await fetch('/api/state');
+    if (res.ok) { const d = await res.json(); if (d) return d; }
+  } catch (e) {}
   try { const raw = localStorage.getItem(LS_KEY); return raw ? JSON.parse(raw) : null; }
   catch (e) { return null; }
 }
-function saveState(s) {
+
+// Write to localStorage immediately, then sync to server
+async function saveStateAsync(s) {
   try { localStorage.setItem(LS_KEY, JSON.stringify(s)); } catch (e) {}
+  try {
+    await fetch('/api/state', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(s),
+    });
+  } catch (e) {}
 }
 
 function useAppState() {
-  const persisted = loadState();
-  const [bills, setBills] = React.useState(persisted?.bills ?? DEFAULT_BILLS);
-  const [debts, setDebts] = React.useState(persisted?.debts ?? DEFAULT_DEBTS);
+  const [ready, setReady] = React.useState(false);
+  const [bills, setBills] = React.useState(DEFAULT_BILLS);
+  const [debts, setDebts] = React.useState(DEFAULT_DEBTS);
 
-  React.useEffect(() => { saveState({ bills, debts }); }, [bills, debts]);
+  // Load from server (or localStorage fallback) once on mount
+  React.useEffect(() => {
+    loadStateAsync().then(persisted => {
+      if (persisted?.bills) setBills(persisted.bills);
+      if (persisted?.debts) setDebts(persisted.debts);
+      setReady(true);
+    });
+  }, []);
+
+  // Persist whenever state changes, but not before the initial load completes
+  React.useEffect(() => {
+    if (!ready) return;
+    saveStateAsync({ bills, debts });
+  }, [bills, debts, ready]);
 
   const setBillStatus = (billId, month, status) => {
     setBills(prev => prev.map(b => {
@@ -516,7 +544,7 @@ function useAppState() {
   };
   const resetData = () => { setBills(DEFAULT_BILLS); setDebts(DEFAULT_DEBTS); };
 
-  return { bills, debts, setBillStatus, setBillAmount, addBill, removeBill, updateBill, addDebt, removeDebt, updateDebt, resetData };
+  return { bills, debts, ready, setBillStatus, setBillAmount, addBill, removeBill, updateBill, addDebt, removeDebt, updateDebt, resetData };
 }
 
 function fmtMoney(n, opts = {}) {
@@ -1586,6 +1614,15 @@ function App() {
     document.documentElement.style.setProperty('--accent', t.accent);
     document.documentElement.style.setProperty('--accent-rgb', hexToRgb(t.accent));
   }, [t.accent]);
+
+  if (!state.ready) {
+    return (
+      <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:12 }}>
+        <div style={{ width:22, height:22, borderRadius:6, background:'linear-gradient(135deg, var(--accent), rgba(var(--accent-rgb),.5))', display:'flex', alignItems:'center', justifyContent:'center', color:'#0a0a0b', fontWeight:700, fontSize:12, fontFamily:'var(--mono)' }}>P</div>
+        <div style={{ color:'var(--muted)', fontFamily:'var(--mono)', fontSize:12, letterSpacing:'.05em' }}>Loading…</div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ minHeight:'100vh', display:'flex', flexDirection:'column' }}>

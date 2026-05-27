@@ -4,4 +4,9 @@ services:
     container_name: finance-dashboard
     ports:
       - "8743:8743"
+    volumes:
+      - finance-data:/data
     restart: unless-stopped
+
+volumes:
+  finance-data:

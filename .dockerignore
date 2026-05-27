@@ -2,4 +2,6 @@
 .claude
 *.zip
 extracted/
+node_modules/
 README.md
+nginx.conf

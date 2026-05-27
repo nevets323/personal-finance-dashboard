@@ -1,12 +1,18 @@
-FROM nginx:alpine
+FROM node:20-alpine
 
-# Remove default nginx static content
-RUN rm -rf /usr/share/nginx/html/*
+WORKDIR /app
 
-# Copy the app
-COPY ["Personal Finance.html", "/usr/share/nginx/html/index.html"]
+# Install dependencies first (cached layer)
+COPY package.json .
+RUN npm install --omit=dev
 
-# Custom nginx config — serve on port 8743
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Copy server and app
+COPY server.js .
+COPY ["Personal Finance.html", "public/index.html"]
+
+# Data directory (overridden by volume at runtime)
+RUN mkdir -p /data
 
 EXPOSE 8743
+
+CMD ["node", "server.js"]

@@ -1,62 +1,75 @@
 # Personal Finance Dashboard
 
-A self-hosted personal finance tracker for managing bills, tracking debt, and visualizing monthly spending. Runs entirely in the browser — all data is stored in your browser's `localStorage`, nothing is sent to any server.
+A self-hosted personal finance tracker for managing bills, tracking debt, and visualizing monthly spending. Data is stored centrally on the server so every device that opens the app sees the same information.
 
 ## Features
 
 - **Dashboard** — monthly bill summary, upcoming due dates, debt overview, and a full-year spending trend chart
-- **Bills** — sortable bill list with per-bill monthly history, year/month navigation, and status tracking (Unpaid / Processing / Paid)
+- **Bills** — bill list with year/month navigation, per-bill monthly history, and status tracking (Unpaid / Processing / Paid)
 - **Calendar** — month grid view with bills plotted by due date; click any chip to cycle its status
 - **Debt** — track balances across multiple accounts with history snapshots and trend charts
 - **Tweaks panel** — row density, accent color, and a "hide paid bills" toggle
+- **Shared data** — all changes sync to the server instantly; every PC/browser sees the same state
 
 ## Quick Start
-
-### Docker (recommended)
 
 ```bash
 docker compose up -d
 ```
 
-Open **http://localhost:8743** in your browser.
-
-### Without Docker
-
-Open `Personal Finance.html` directly in any modern browser — no build step or server required.
+Open **http://\<your-server-ip\>:8743** from any device on your network.
 
 ## Port
 
-The container listens on **port 8743**. To use a different port, edit the `ports` mapping in `docker-compose.yml`:
+The app runs on **port 8743**. To change it, edit `docker-compose.yml`:
 
 ```yaml
 ports:
   - "YOUR_PORT:8743"
 ```
 
+## Data Persistence
+
+State is saved to `/data/state.json` inside the container, backed by a named Docker volume (`finance-data`). The volume survives container restarts and rebuilds.
+
+```bash
+# Where the data lives on the host
+docker volume inspect finance-data
+```
+
+To back up your data:
+```bash
+docker cp finance-dashboard:/data/state.json ./state-backup.json
+```
+
+To restore:
+```bash
+docker cp ./state-backup.json finance-dashboard:/data/state.json
+```
+
 ## Entering Your Data
 
-All dollar amounts start at **$0** — the bill names and due dates are pre-filled as a template.
+All dollar amounts start at **$0** — bill names and due dates are pre-filled as a template.
 
-1. Go to **Bills**, select a month, and click the ✏️ edit icon on any row to enter the amount
+1. Go to **Bills**, select a month, and click the ✏️ edit icon on any row to enter your amount
 2. Go to **Debt** and click **+ Add debt** to add your accounts
-3. Use **+ Add bill** to add any bills not already listed, or the 🗑️ icon to remove ones you don't need
-
-Data persists in `localStorage` — it survives page refreshes but is tied to the browser you use.
+3. Use **+ Add bill** to add any bills not already listed, or 🗑️ to remove ones you don't need
 
 ## Resetting Data
 
-Open the **Tweaks** panel (gear/edit icon) and click **Reset to blank defaults** to wipe all entered data and start over.
+Open the **Tweaks** panel and click **Reset to blank defaults** to wipe all data and start over.
 
 ## Stack
 
 - React 18 (CDN, no build step)
 - Babel Standalone (in-browser JSX transpilation)
+- Node.js + Express (backend / data persistence)
 - Geist font (Google Fonts)
-- nginx:alpine (Docker)
+- node:20-alpine (Docker)
 
-## Building the Image
+## Building Manually
 
 ```bash
 docker build -t finance-dashboard .
-docker run -d -p 8743:8743 --name finance-dashboard finance-dashboard
+docker run -d -p 8743:8743 -v finance-data:/data --name finance-dashboard finance-dashboard
 ```
