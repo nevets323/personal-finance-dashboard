@@ -43,6 +43,19 @@
     width: 600px; height: 200px; pointer-events: none; z-index: 0;
     background: radial-gradient(ellipse at top, rgba(var(--accent-rgb),.07), transparent 70%);
   }
+  /* ── Responsive ─────────────────────────────────────────── */
+  @media (max-width: 680px) {
+    .top-nav  { display: none !important; }
+    .top-date { display: none !important; }
+    .kpi-grid { grid-template-columns: repeat(2, 1fr) !important; }
+    .dash-two-col { grid-template-columns: 1fr !important; }
+    .debt-stats { grid-template-columns: 1fr 1fr !important; }
+    .month-scroll { overflow-x: auto !important; flex-wrap: nowrap !important;
+      -webkit-overflow-scrolling: touch; scrollbar-width: none; padding-bottom: 2px; }
+    .month-scroll::-webkit-scrollbar { display: none; }
+    .bill-detail-stats { grid-template-columns: repeat(2, 1fr) !important; }
+    .debt-history-cols  { grid-template-columns: 1fr !important; }
+  }
 </style>
 </head>
 <body>
@@ -707,11 +720,49 @@ function CategoryDot({ category }) {
   return <span style={{ display:'inline-block', width:6, height:6, borderRadius:2, background: map[category]||'#888', marginRight:8, verticalAlign:'middle' }}/>;
 }
 
+// ── responsive helpers ────────────────────────────────────────────────────────
+
+function useBreakpoint() {
+  const [mobile, setMobile] = React.useState(() => window.innerWidth <= 680);
+  React.useEffect(() => {
+    const h = () => setMobile(window.innerWidth <= 680);
+    window.addEventListener('resize', h);
+    return () => window.removeEventListener('resize', h);
+  }, []);
+  return { mobile };
+}
+
+function BottomNav({ view, setView }) {
+  return (
+    <nav style={{
+      position:'fixed', bottom:0, left:0, right:0, zIndex:40,
+      background:'var(--panel)', borderTop:'1px solid var(--border)',
+      display:'flex', paddingBottom:'env(safe-area-inset-bottom)',
+    }}>
+      {NAV.map(n => {
+        const active = view === n.id;
+        return (
+          <button key={n.id} onClick={() => setView(n.id)} style={{
+            flex:1, border:0, background:'transparent', cursor:'pointer',
+            display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
+            gap:3, padding:'8px 0 6px',
+            color: active ? 'var(--accent)' : 'var(--muted)',
+            fontSize:10, fontWeight: active ? 600 : 400, fontFamily:'inherit',
+          }}>
+            {n.icon}
+            {n.label}
+          </button>
+        );
+      })}
+    </nav>
+  );
+}
+
 // ── dashboard ─────────────────────────────────────────────────────────────────
 
 const btnLinkStyle = { appearance:'none', border:0, background:'transparent', color:'var(--muted)', fontSize:11.5, cursor:'pointer', padding:0, fontFamily:'inherit' };
 
-function Dashboard({ state, onNav }) {
+function Dashboard({ state, onNav, mobile }) {
   const { bills, debts } = state;
   const cm = CURRENT_MONTH;
   const nextMonth = '2026-06';
@@ -778,7 +829,7 @@ function Dashboard({ state, onNav }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+      <div className="kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
         {stats.map((s, i) => (
           <Card key={i} style={{ padding: 16 }}>
             <div style={{ fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.05em', fontWeight: 500 }}>{s.label}</div>
@@ -799,7 +850,7 @@ function Dashboard({ state, onNav }) {
         ))}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 12 }}>
+      <div className="dash-two-col" style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 12 }}>
         <Card padded={false}>
           <div style={{ padding: '14px 16px 6px' }}>
             <SectionTitle hint={`${upcoming.length} due in next 21 days`}
@@ -941,7 +992,7 @@ function ModalShell({ onClose, title, children }) {
   );
 }
 
-function BillsView({ state, density, hidePaid }) {
+function BillsView({ state, density, hidePaid, mobile }) {
   const { bills } = state;
   const [viewMonth, setViewMonth] = React.useState(CURRENT_MONTH);
   const [openBillId, setOpenBillId] = React.useState(null);
@@ -986,8 +1037,8 @@ function BillsView({ state, density, hidePaid }) {
               onMouseEnter={e=>{ if(viewYr < MAX_YEAR) e.currentTarget.style.background='var(--hover)'; }}
               onMouseLeave={e=>e.currentTarget.style.background='var(--panel-2)'}>›</button>
           </div>
-          {/* Month chips */}
-          <div style={{ display:'flex', gap:3 }}>
+          {/* Month chips — horizontal scroll on mobile */}
+          <div className="month-scroll" style={{ display:'flex', gap:3, flexWrap:'wrap' }}>
             {MONTHS.map((m, i) => {
               const active = i === viewMIdx;
               return (
@@ -1014,12 +1065,15 @@ function BillsView({ state, density, hidePaid }) {
       </div>
 
       <Card padded={false}>
-        <div style={{ display:'grid', gridTemplateColumns:'52px 1.4fr 1fr 1fr 100px 84px 70px', padding:'10px 14px', borderBottom:'1px solid var(--border)', fontSize:10, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'.06em', fontWeight:500 }}>
-          <div>Due</div><div>Bill</div><div>Category</div><div>Status</div>
-          <div style={{ textAlign:'right' }}>Amount</div>
-          <div style={{ textAlign:'right' }}>YTD paid</div>
-          <div/>
-        </div>
+        {/* ── Desktop table header ── */}
+        {!mobile && (
+          <div style={{ display:'grid', gridTemplateColumns:'52px 1.4fr 1fr 1fr 100px 84px 70px', padding:'10px 14px', borderBottom:'1px solid var(--border)', fontSize:10, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'.06em', fontWeight:500 }}>
+            <div>Due</div><div>Bill</div><div>Category</div><div>Status</div>
+            <div style={{ textAlign:'right' }}>Amount</div>
+            <div style={{ textAlign:'right' }}>YTD paid</div>
+            <div/>
+          </div>
+        )}
         {rows.length === 0 && (
           <div style={{ padding:32, textAlign:'center', fontSize:12, color:'var(--muted)' }}>
             {hidePaid ? 'All bills paid for this month.' : 'No bills for this month yet.'}
@@ -1028,6 +1082,50 @@ function BillsView({ state, density, hidePaid }) {
         {rows.map((r, idx) => {
           const ytd = ytdPaid(r.bill);
           const expanded = openBillId === r.bill.id;
+          if (mobile) {
+            /* ── Mobile card row ── */
+            return (
+              <div key={r.bill.id} style={{ borderTop: idx > 0 ? '1px solid var(--border)' : 'none' }}>
+                <div style={{ padding:'12px 14px', display:'flex', alignItems:'center', gap:10, background: expanded ? 'var(--hover)' : 'transparent', cursor:'pointer' }}
+                  onClick={() => setOpenBillId(expanded ? null : r.bill.id)}>
+                  {/* Due day badge */}
+                  <div style={{ width:34, flexShrink:0, textAlign:'center' }}>
+                    <div style={{ fontFamily:'var(--mono)', fontSize:18, fontWeight:600, lineHeight:1 }}>{String(r.bill.dueDay).padStart(2,'0')}</div>
+                    <div style={{ fontSize:9, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'.06em', marginTop:2 }}>due</div>
+                  </div>
+                  {/* Name + category */}
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ fontSize:13, fontWeight:500, display:'flex', alignItems:'center' }}>
+                      <CategoryDot category={r.bill.category}/>{r.bill.name}
+                    </div>
+                    <div style={{ fontSize:11, color:'var(--muted)', marginTop:2 }}>{r.bill.category}</div>
+                  </div>
+                  {/* Amount + status */}
+                  <div style={{ textAlign:'right', flexShrink:0 }}>
+                    <div style={{ fontFamily:'var(--mono)', fontSize:14, fontVariantNumeric:'tabular-nums', fontWeight:500 }}>{fmtMoney(r.entry.amount)}</div>
+                    <div style={{ marginTop:5 }} onClick={e=>e.stopPropagation()}>
+                      <StatusPill status={r.entry.status} onChange={(s)=>state.setBillStatus(r.bill.id, viewMonth, s)} size="xs"/>
+                    </div>
+                  </div>
+                  {/* Actions */}
+                  <div style={{ display:'flex', flexDirection:'column', gap:4, flexShrink:0 }} onClick={e=>e.stopPropagation()}>
+                    <IconBtn title="Edit" onClick={()=>setEditingId(r.bill.id)}>
+                      <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M11 2.5l2.5 2.5L5 13.5H2.5V11L11 2.5z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/></svg>
+                    </IconBtn>
+                    <IconBtn title="Delete" danger onClick={()=>{ if(confirm(`Delete "${r.bill.name}"?`)) state.removeBill(r.bill.id); }}>
+                      <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M3 4.5h10M6.5 4V2.5h3V4M5 4.5l.5 9h5l.5-9M7 7v4M9 7v4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    </IconBtn>
+                  </div>
+                </div>
+                {expanded && (
+                  <div style={{ padding:'6px 14px 16px', background:'var(--hover)', borderTop:'1px solid var(--border)' }}>
+                    <BillDetail bill={r.bill} state={state}/>
+                  </div>
+                )}
+              </div>
+            );
+          }
+          /* ── Desktop table row ── */
           return (
             <div key={r.bill.id} style={{ borderTop: idx > 0 ? '1px solid var(--border)' : 'none' }}>
               <div style={{ display:'grid', gridTemplateColumns:'52px 1.4fr 1fr 1fr 100px 84px 70px', padding:rowPad, alignItems:'center', cursor:'pointer', background: expanded ? 'var(--hover)' : 'transparent' }}
@@ -1079,7 +1177,7 @@ function BillDetail({ bill, state }) {
 
   return (
     <div style={{ padding:'12px 8px 4px' }}>
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:10, marginBottom:14 }}>
+      <div className="bill-detail-stats" style={{ display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:10, marginBottom:14 }}>
         {[
           { label:'Avg / month', value: fmtMoney(avg) },
           { label:'YTD paid',    value: fmtMoney(total) },
@@ -1210,7 +1308,7 @@ function EditBillModal({ onClose, state, bill, viewMonth }) {
 
 // ── calendar view ─────────────────────────────────────────────────────────────
 
-function CalendarView({ state, hidePaid }) {
+function CalendarView({ state, hidePaid, mobile }) {
   const [viewYear, setViewYear] = React.useState(TODAY.getFullYear());
   const [viewMonthIdx, setViewMonthIdx] = React.useState(TODAY.getMonth());
   const mk = `${viewYear}-${String(viewMonthIdx+1).padStart(2,'0')}`;
@@ -1256,10 +1354,10 @@ function CalendarView({ state, hidePaid }) {
       <Card padded={false}>
         <div style={{ display:'grid', gridTemplateColumns:'repeat(7, 1fr)', borderBottom:'1px solid var(--border)' }}>
           {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => (
-            <div key={d} style={{ padding:'10px 12px', fontSize:10, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'.08em', fontWeight:500, borderRight:'1px solid var(--border)' }}>{d}</div>
+            <div key={d} style={{ padding: mobile ? '7px 4px' : '10px 12px', fontSize: mobile ? 9 : 10, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'.08em', fontWeight:500, borderRight:'1px solid var(--border)', textAlign: mobile ? 'center' : 'left' }}>{mobile ? d.slice(0,1) : d}</div>
           ))}
         </div>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(7, 1fr)', gridAutoRows:'minmax(110px, 1fr)' }}>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(7, 1fr)', gridAutoRows:`minmax(${mobile ? 70 : 110}px, 1fr)` }}>
           {Array.from({ length: totalCells }).map((_, i) => {
             const dayNum = i - startOffset + 1;
             const inMonth = dayNum >= 1 && dayNum <= daysInMonth;
@@ -1317,7 +1415,7 @@ function CalendarBillChip({ item, state, monthKey }) {
 
 // ── debt view ─────────────────────────────────────────────────────────────────
 
-function DebtView({ state }) {
+function DebtView({ state, mobile }) {
   const { debts } = state;
   const [openId, setOpenId] = React.useState(null);
   const [showAdd, setShowAdd] = React.useState(false);
@@ -1340,7 +1438,7 @@ function DebtView({ state }) {
 
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:12 }}>
+      <div className="debt-stats" style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:12 }}>
         <Card style={{ padding:16 }}>
           <div style={{ fontSize:11, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'.05em' }}>Total debt</div>
           <div style={{ fontFamily:'var(--mono)', fontSize:26, marginTop:4, letterSpacing:'-.015em', fontVariantNumeric:'tabular-nums' }}>{fmtMoney(totalDebt)}</div>
@@ -1372,6 +1470,50 @@ function DebtView({ state }) {
             const change = d.balance - oldest;
             const pct = totalDebt ? (d.balance/totalDebt)*100 : 0;
             const expanded = openId === d.id;
+            if (mobile) {
+              /* ── Mobile debt card ── */
+              return (
+                <div key={d.id} style={{ borderTop: idx > 0 ? '1px solid var(--border)' : 'none' }}>
+                  <div style={{ padding:'12px 14px', cursor:'pointer', background: expanded?'var(--hover)':'transparent' }}
+                    onClick={() => setOpenId(expanded ? null : d.id)}>
+                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:8 }}>
+                      <div>
+                        <div style={{ fontSize:13, fontWeight:500 }}><CategoryDot category={d.category}/>{d.name}</div>
+                        <div style={{ fontSize:11, color:'var(--muted)', marginTop:2 }}>{d.category}</div>
+                      </div>
+                      <div style={{ textAlign:'right' }}>
+                        <div style={{ fontFamily:'var(--mono)', fontSize:16, fontWeight:600, fontVariantNumeric:'tabular-nums' }}>{fmtMoney(d.balance)}</div>
+                        <div style={{ fontSize:11, fontFamily:'var(--mono)', marginTop:2, color: change<0?'#4ade80':change>0?'#f87171':'var(--muted)' }}>
+                          {change<0?'↓ ':change>0?'↑ ':''}{fmtMoney(Math.abs(change),{compact:true})}
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ height:3, background:'var(--border)', borderRadius:2, overflow:'hidden', marginBottom:6 }}>
+                      <div style={{ height:'100%', width:`${pct}%`, background:'var(--accent)' }}/>
+                    </div>
+                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                      <div style={{ fontSize:11, color:'var(--muted)', fontFamily:'var(--mono)' }}>
+                        {pct.toFixed(1)}% · min {fmtMoney(d.minPayment||0)}/mo
+                      </div>
+                      <div style={{ display:'flex', gap:6 }} onClick={e=>e.stopPropagation()}>
+                        <IconBtn title="Edit" onClick={()=>setEditingId(d.id)}>
+                          <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M11 2.5l2.5 2.5L5 13.5H2.5V11L11 2.5z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/></svg>
+                        </IconBtn>
+                        <IconBtn title="Delete" danger onClick={()=>{ if(confirm(`Delete "${d.name}"?`)) state.removeDebt(d.id); }}>
+                          <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M3 4.5h10M6.5 4V2.5h3V4M5 4.5l.5 9h5l.5-9M7 7v4M9 7v4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                        </IconBtn>
+                      </div>
+                    </div>
+                  </div>
+                  {expanded && (
+                    <div style={{ padding:'8px 14px 16px', background:'var(--hover)', borderTop:'1px solid var(--border)' }}>
+                      <DebtHistoryDetail debt={d} state={state}/>
+                    </div>
+                  )}
+                </div>
+              );
+            }
+            /* ── Desktop debt row ── */
             return (
               <div key={d.id} style={{ borderTop: idx > 0 ? '1px solid var(--border)' : 'none' }}>
                 <div style={{ display:'grid', gridTemplateColumns:'1.5fr 1fr 110px 110px 120px 70px', alignItems:'center', gap:12, padding:'12px 16px', cursor:'pointer', background: expanded?'var(--hover)':'transparent' }}
@@ -1449,7 +1591,7 @@ function DebtHistoryDetail({ debt }) {
   const values = history.map(h => h.balance);
   return (
     <div style={{ padding:'12px 8px 0' }}>
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1.6fr', gap:24 }}>
+      <div className="debt-history-cols" style={{ display:'grid', gridTemplateColumns:'1fr 1.6fr', gap:24 }}>
         <div>
           <div style={{ fontSize:10, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'.06em', marginBottom:8 }}>Balance history</div>
           <div style={{ display:'flex', flexDirection:'column', gap:6, maxHeight:200, overflowY:'auto' }}>
@@ -1609,6 +1751,7 @@ function App() {
   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
   const state = useAppState();
   const [view, setView] = React.useState('dashboard');
+  const { mobile } = useBreakpoint();
 
   React.useEffect(() => {
     document.documentElement.style.setProperty('--accent', t.accent);
@@ -1632,7 +1775,7 @@ function App() {
             <div style={{ width:22, height:22, borderRadius:6, background:'linear-gradient(135deg, var(--accent), rgba(var(--accent-rgb),.5))', display:'flex', alignItems:'center', justifyContent:'center', color:'#0a0a0b', fontWeight:700, fontSize:12, fontFamily:'var(--mono)' }}>P</div>
             <div style={{ fontSize:13, fontWeight:600, letterSpacing:'-.01em' }}>Personal Finance</div>
           </div>
-          <nav style={{ display:'flex', gap:2 }}>
+          <nav className="top-nav" style={{ display:'flex', gap:2 }}>
             {NAV.map(n => {
               const active = view === n.id;
               return (
@@ -1645,13 +1788,13 @@ function App() {
               );
             })}
           </nav>
-          <div style={{ marginLeft:'auto', fontSize:11.5, color:'var(--muted)', fontFamily:'var(--mono)' }}>
+          <div className="top-date" style={{ marginLeft:'auto', fontSize:11.5, color:'var(--muted)', fontFamily:'var(--mono)' }}>
             {TODAY.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric', year:'numeric' })}
           </div>
         </div>
       </header>
 
-      <main style={{ maxWidth:1280, margin:'0 auto', padding:'20px 28px 48px', width:'100%', boxSizing:'border-box' }}>
+      <main style={{ maxWidth:1280, margin:'0 auto', padding: mobile ? '14px 14px 80px' : '20px 28px 48px', width:'100%', boxSizing:'border-box' }}>
         <div style={{ marginBottom:18 }}>
           <h1 style={{ margin:0, fontSize:22, fontWeight:600, letterSpacing:'-.02em' }}>
             {{ dashboard:'Dashboard', bills:'Bills', calendar:'Calendar', debt:'Debt' }[view]}
@@ -1661,11 +1804,13 @@ function App() {
           </div>
         </div>
 
-        {view === 'dashboard' && <Dashboard state={state} onNav={setView}/>}
-        {view === 'bills'     && <BillsView state={state} density={t.density} hidePaid={t.hidePaid}/>}
-        {view === 'calendar'  && <CalendarView state={state} hidePaid={t.hidePaid}/>}
-        {view === 'debt'      && <DebtView state={state}/>}
+        {view === 'dashboard' && <Dashboard state={state} onNav={setView} mobile={mobile}/>}
+        {view === 'bills'     && <BillsView state={state} density={t.density} hidePaid={t.hidePaid} mobile={mobile}/>}
+        {view === 'calendar'  && <CalendarView state={state} hidePaid={t.hidePaid} mobile={mobile}/>}
+        {view === 'debt'      && <DebtView state={state} mobile={mobile}/>}
       </main>
+
+      {mobile && <BottomNav view={view} setView={setView}/>}
 
       <TweaksPanel>
         <TweakSection label="Display"/>
